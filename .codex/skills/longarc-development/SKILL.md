@@ -13,6 +13,7 @@ Use this skill whenever making code, CI, or documentation updates in this reposi
 2. When updating the code, prepare a clear title, a human-readable description, and a concrete test plan.
 3. Add or update the tracking document.
 4. Unless the user explicitly specifies a different workflow, always sync from remote `main` first and create a new branch from that updated `main` before continuing development.
+5. For each new request or feature, create or update a PR and ensure it includes a clear title, description, and test plan.
 
 ## Workflow
 
@@ -23,3 +24,4 @@ Use this skill whenever making code, CI, or documentation updates in this reposi
 5. Add or update tests, then run local checks.
 6. Update `docs/track.md` with what changed and how it was verified.
 7. Ensure PR notes follow `.github/pull_request_template.md`.
+8. For each new request/feature, open or update the PR with a complete title, description, and test plan.
