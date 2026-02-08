@@ -4,7 +4,9 @@ set -euo pipefail
 required_files=(
   ".codex/skills/longarc-development/SKILL.md"
   ".github/pull_request_template.md"
+  ".github/workflows/pr-metadata-autofill.yml"
   "docs/track.md"
+  "scripts/ci/validate_pr_metadata.py"
 )
 
 for file in "${required_files[@]}"; do

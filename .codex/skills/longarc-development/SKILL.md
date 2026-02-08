@@ -13,7 +13,7 @@ Use this skill whenever making code, CI, or documentation updates in this reposi
 2. When updating the code, prepare a clear title, a human-readable description, and a concrete test plan.
 3. Add or update the tracking document.
 4. Unless the user explicitly specifies a different workflow, always sync from remote `main` first and create a new branch from that updated `main` before continuing development.
-5. For each new request or feature, create or update a PR and ensure it includes a clear title, description, and test plan.
+5. For each new request or feature, treat PR creation/update as the default final step and ensure it includes a clear title, description, and test plan.
 6. Treat PR metadata as a required delivery artifact: do not consider the task complete until the PR title and body are updated to match `.github/pull_request_template.md`.
 7. If PR metadata cannot be updated from the environment (for example missing `gh` or missing auth), explicitly report that blocker and provide a ready-to-paste PR title/body in the final response.
 
@@ -26,5 +26,5 @@ Use this skill whenever making code, CI, or documentation updates in this reposi
 5. Add or update tests, then run local checks.
 6. Update `docs/track.md` with what changed and how it was verified.
 7. Ensure PR notes follow `.github/pull_request_template.md`.
-8. For each new request/feature, open or update the PR with a complete title, description, and test plan.
+8. For each new request/feature, finish by opening or updating the PR (default last step) with a complete title, description, and test plan.
 9. Before finalizing, verify PR metadata is actually present on the PR (not just drafted locally). If verification is blocked by tooling/auth, surface the blocker and include exact PR-ready content.
