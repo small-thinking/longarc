@@ -5,10 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "longarc"
 version = "0.1.0"
-description = "Low-frequency, audit-first trading system."
+description = "Low-frequency, audit-first trading system evolving toward agentic workflows."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "pydantic>=2.6.0",
+  "PyYAML>=6.0.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -16,6 +19,13 @@ dev = [
   "pytest>=8.3.3",
   "ruff>=0.6.8",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/longarc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
 
 [tool.ruff]
 line-length = 100
@@ -28,7 +38,3 @@ select = ["E", "F", "I"]
 python_version = "3.11"
 strict = true
 files = ["src"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-q"

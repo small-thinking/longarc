@@ -8,8 +8,8 @@ Track milestone progress, quality controls, and verification history.
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
-| M0 | In progress | Python scaffold established with `src/` and `tests/`. |
-| M1 | In progress | `uv`-based quality workflow and governance checks added. |
+| M0 | Completed | Python package scaffold, config/logging modules, CLI skeleton, and baseline tests added. |
+| M1 | In progress | `uv`-based quality workflow and governance checks added; data layer implementation pending. |
 
 ## Change Log
 
@@ -31,11 +31,22 @@ Track milestone progress, quality controls, and verification history.
 ### 2026-02-08
 
 - Updated `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` to install dependencies with `uv sync --extra dev` instead of `uv pip install`, to avoid environment resolution failures on GitHub runners.
+- Added project metadata and tooling config at `/Users/Yexi/source/longarc/pyproject.toml`.
+- Added package scaffold files under `/Users/Yexi/source/longarc/src/longarc/`.
+- Implemented config loading/validation in `/Users/Yexi/source/longarc/src/longarc/core/config.py`.
+- Implemented logging initialization in `/Users/Yexi/source/longarc/src/longarc/core/logging.py`.
+- Implemented CLI skeleton and placeholders in `/Users/Yexi/source/longarc/src/longarc/cli.py`.
+- Added config and env templates at `/Users/Yexi/source/longarc/config/config.example.yaml` and `/Users/Yexi/source/longarc/.env.example`.
+- Added runner scripts `/Users/Yexi/source/longarc/scripts/run_backtest.sh` and `/Users/Yexi/source/longarc/scripts/run_paper.sh`.
+- Added baseline smoke tests at `/Users/Yexi/source/longarc/tests/test_package_smoke.py`.
+- Updated `/Users/Yexi/source/longarc/README.md` with a quick-start CLI command.
 
 ### Verification
 
 - `bash scripts/ci/validate_governance.sh`
+- `uv sync --extra dev`
+- `uv run python -m longarc.cli --help`
+- `uv run pytest`
 - `uv run ruff check .`
 - `uv run mypy`
-- `uv run pytest`
-- `uv sync --extra dev`
+- `uv run mypy src`
