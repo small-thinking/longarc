@@ -1,0 +1,37 @@
+mode: backtest
+timezone: America/New_York
+
+universe:
+  symbols: ["AAPL"]
+  timeframe: "1d"
+
+data:
+  provider: "local_parquet"
+  path: "./data"
+
+broker:
+  adapter: "paper_sim"
+
+strategy:
+  name: "sma_cross"
+  params:
+    fast_window: 20
+    slow_window: 100
+
+portfolio:
+  base_currency: "USD"
+  initial_cash: 100000
+
+risk:
+  max_position_notional: 20000
+  max_order_notional: 5000
+  max_daily_loss: 1000
+  kill_switch: true
+
+cost_model:
+  fee_bps: 1.0
+  slippage_bps: 2.0
+
+runtime:
+  schedule: null
+  dry_run: false
