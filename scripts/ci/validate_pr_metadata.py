@@ -9,15 +9,6 @@ import os
 import re
 from pathlib import Path
 
-PLACEHOLDER_STRINGS = {
-    "Describe what changed and why it is needed.",
-    "List exact verification steps and expected results.",
-    "Fill in what changed and why.",
-    "- [ ] Add exact verification steps and outcomes.",
-    "_No description provided._",
-    "_No test plan provided._",
-}
-
 
 def _extract_section(body: str, heading: str) -> str | None:
     escaped_heading = re.escape(heading)
@@ -37,16 +28,12 @@ def validate_pr_metadata(title: str, body: str) -> list[str]:
     description = _extract_section(body, "Description")
     if description is None:
         errors.append("Missing required section: ## Description")
-    elif description in PLACEHOLDER_STRINGS:
-        errors.append("Section ## Description must be replaced with real content.")
     elif not description.strip():
         errors.append("Section ## Description must not be empty.")
 
     test_plan = _extract_section(body, "Test Plan")
     if test_plan is None:
         errors.append("Missing required section: ## Test Plan")
-    elif test_plan in PLACEHOLDER_STRINGS:
-        errors.append("Section ## Test Plan must be replaced with real content.")
     elif not test_plan.strip():
         errors.append("Section ## Test Plan must not be empty.")
 

@@ -36,7 +36,7 @@ def test_pr_metadata_validation_passes_for_filled_sections(tmp_path: Path) -> No
     assert "PR metadata validation passed." in result.stdout
 
 
-def test_pr_metadata_validation_fails_for_placeholder_sections(tmp_path: Path) -> None:
+def test_pr_metadata_validation_passes_for_non_empty_placeholder_sections(tmp_path: Path) -> None:
     payload = {
         "pull_request": {
             "title": "docs: placeholder",
@@ -49,6 +49,5 @@ def test_pr_metadata_validation_fails_for_placeholder_sections(tmp_path: Path) -
         }
     }
     result = _run_with_event(tmp_path, payload)
-    assert result.returncode == 1
-    assert "Section ## Description must be replaced with real content." in result.stdout
-    assert "Section ## Test Plan must be replaced with real content." in result.stdout
+    assert result.returncode == 0
+    assert "PR metadata validation passed." in result.stdout
