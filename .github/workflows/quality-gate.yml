@@ -14,6 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pr-metadata:
+    name: PR metadata checks
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PR title/body metadata
+        run: python scripts/ci/validate_pr_metadata.py --event-path "$GITHUB_EVENT_PATH"
+
   governance:
     name: Governance checks
     runs-on: ubuntu-latest

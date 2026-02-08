@@ -1,0 +1,83 @@
+name: PR Metadata Autofill
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  autofill:
+    name: Autofill missing PR metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fill missing title/body sections
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = pr.number;
+
+            let title = (pr.title || "").trim();
+            if (!title) {
+              title = `chore: update ${pr.head.ref}`;
+            }
+
+            let body = pr.body || "";
+            let changed = title !== (pr.title || "");
+
+            const ensureSection = (inputBody, heading, fallback) => {
+              const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              const sectionRegex = new RegExp(`(^|\\n)## ${escaped}\\n([\\s\\S]*?)(?=\\n## |$)`, "m");
+              const match = inputBody.match(sectionRegex);
+
+              if (!match) {
+                const prefix = inputBody.trim().length ? "\n\n" : "";
+                return {
+                  body: `${inputBody}${prefix}## ${heading}\n${fallback}\n`,
+                  changed: true,
+                };
+              }
+
+              const sectionContent = (match[2] || "").trim();
+              if (sectionContent.length > 0) {
+                return { body: inputBody, changed: false };
+              }
+
+              const replacement = `${match[1]}## ${heading}\n${fallback}\n`;
+              return { body: inputBody.replace(sectionRegex, replacement), changed: true };
+            };
+
+            const sections = [
+              ["Description", "_No description provided._"],
+              ["Test Plan", "_No test plan provided._"],
+              ["Tracking Doc", "Confirm `docs/track.md` is updated for this change."],
+            ];
+
+            for (const [heading, fallback] of sections) {
+              const result = ensureSection(body, heading, fallback);
+              body = result.body;
+              changed = changed || result.changed;
+            }
+
+            if (!changed) {
+              core.info("PR metadata already populated; no changes made.");
+              return;
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number,
+              title,
+              body,
+            });
+            core.info(`Updated PR #${pull_number} metadata.`);

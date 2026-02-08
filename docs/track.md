@@ -46,6 +46,10 @@ Track milestone progress, quality controls, and verification history.
 - Tightened `/Users/Yexi/source/longarc/README.md` to be more concise while keeping comprehensive coverage of status, capabilities, setup, configuration, and developer checks.
 - Strengthened `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to require syncing latest remote `main` for every operation and to require ending any repository update with a PR that includes filled title, description, and test plan.
 - Clarified `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` so creating/updating a PR is explicitly the default last step for all feature development tasks.
+- Added `/Users/Yexi/source/longarc/.github/workflows/pr-metadata-autofill.yml` to auto-populate missing PR metadata sections on PR open/edit/sync/reopen.
+- Added PR metadata validator at `/Users/Yexi/source/longarc/scripts/ci/validate_pr_metadata.py` and wired it into `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` as a pull-request check.
+- Added tests for PR metadata validation behavior at `/Users/Yexi/source/longarc/tests/test_pr_metadata_validation.py`.
+- Updated governance validation script at `/Users/Yexi/source/longarc/scripts/ci/validate_governance.sh` to require the PR metadata autofill workflow and validator script.
 
 ### Verification
 
@@ -61,3 +65,6 @@ Track milestone progress, quality controls, and verification history.
 - `UV_CACHE_DIR=.uv-cache uv run pytest`
 - `UV_CACHE_DIR=.uv-cache uv run ruff check .`
 - `UV_CACHE_DIR=.uv-cache uv run mypy src`
+- `bash scripts/ci/validate_governance.sh`
+- `UV_CACHE_DIR=.uv-cache uv run pytest`
+- `UV_CACHE_DIR=.uv-cache uv run ruff check .`
