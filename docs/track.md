@@ -28,9 +28,14 @@ Track milestone progress, quality controls, and verification history.
 - Added corresponding test at `/Users/Yexi/source/longarc/tests/test_package_smoke.py`.
 - Updated `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` to run Python checks via `uv`.
 
+### 2026-02-08
+
+- Updated `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` to install dependencies with `uv sync --extra dev` instead of `uv pip install`, to avoid environment resolution failures on GitHub runners.
+
 ### Verification
 
 - `bash scripts/ci/validate_governance.sh`
 - `uv run ruff check .`
 - `uv run mypy`
 - `uv run pytest`
+- `uv sync --extra dev`
