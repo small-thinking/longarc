@@ -32,7 +32,6 @@ Track milestone progress, quality controls, and verification history.
 
 - Updated `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to require pulling latest remote `main` and creating a fresh branch from updated `main` before development, unless the user explicitly asks for a different workflow.
 - Updated `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to require creating/updating a PR for each new request or feature with mandatory PR title, description, and test plan content.
-- Updated `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to enforce a PR metadata completion gate (must verify title/body are actually updated), plus explicit blocker handling with ready-to-paste PR content when tooling/auth is unavailable.
 - Updated `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` to install dependencies with `uv sync --extra dev` instead of `uv pip install`, to avoid environment resolution failures on GitHub runners.
 - Added project metadata and tooling config at `/Users/Yexi/source/longarc/pyproject.toml`.
 - Added package scaffold files under `/Users/Yexi/source/longarc/src/longarc/`.
@@ -43,11 +42,10 @@ Track milestone progress, quality controls, and verification history.
 - Added runner scripts `/Users/Yexi/source/longarc/scripts/run_backtest.sh` and `/Users/Yexi/source/longarc/scripts/run_paper.sh`.
 - Added baseline smoke tests at `/Users/Yexi/source/longarc/tests/test_package_smoke.py`.
 - Updated `/Users/Yexi/source/longarc/README.md` with a quick-start CLI command.
-- Added parquet-backed data storage at `/Users/Yexi/source/longarc/src/longarc/data/store.py` with sorting, deduplication, and idempotent writes by timestamp.
-- Added local parquet provider at `/Users/Yexi/source/longarc/src/longarc/data/providers/local_parquet.py` with deterministic synthetic bar generation for `1m`/`1h`/`1d`.
-- Implemented `data download` and `data show-latest` CLI behaviors in `/Users/Yexi/source/longarc/src/longarc/cli.py`.
-- Added data-layer tests at `/Users/Yexi/source/longarc/tests/test_data_store.py` and `/Users/Yexi/source/longarc/tests/test_cli_data.py`.
-- Added `pyarrow` runtime dependency in `/Users/Yexi/source/longarc/pyproject.toml` and refreshed `/Users/Yexi/source/longarc/uv.lock`.
+- Rewrote `/Users/Yexi/source/longarc/README.md` into a human-readable capabilities and usage guide, including current implemented scope vs planned features, setup steps, command examples, configuration notes, and developer workflow commands.
+- Tightened `/Users/Yexi/source/longarc/README.md` to be more concise while keeping comprehensive coverage of status, capabilities, setup, configuration, and developer checks.
+- Strengthened `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to require syncing latest remote `main` for every operation and to require ending any repository update with a PR that includes filled title, description, and test plan.
+- Clarified `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` so creating/updating a PR is explicitly the default last step for all feature development tasks.
 
 ### Verification
 
@@ -59,6 +57,7 @@ Track milestone progress, quality controls, and verification history.
 - `uv run ruff check .`
 - `uv run mypy`
 - `uv run mypy src`
-- `uv run ruff check .` (pass)
-- `uv run mypy src` (pass)
-- `uv run pytest` (pass, 8 tests)
+- `UV_CACHE_DIR=.uv-cache uv sync --extra dev`
+- `UV_CACHE_DIR=.uv-cache uv run pytest`
+- `UV_CACHE_DIR=.uv-cache uv run ruff check .`
+- `UV_CACHE_DIR=.uv-cache uv run mypy src`
