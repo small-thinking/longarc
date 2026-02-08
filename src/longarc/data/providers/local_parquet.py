@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from longarc.data.providers.base import DownloadResult
 from longarc.data.store import WriteResult, write_bars
 
 _TIMEFRAME_STEP: dict[str, timedelta] = {
@@ -13,15 +13,6 @@ _TIMEFRAME_STEP: dict[str, timedelta] = {
     "1h": timedelta(hours=1),
     "1d": timedelta(days=1),
 }
-
-
-@dataclass(frozen=True)
-class DownloadResult:
-    symbol: str
-    timeframe: str
-    input_rows: int
-    total_rows: int
-
 
 def _parse_day(value: str) -> datetime:
     return datetime.fromisoformat(value).replace(tzinfo=UTC)
@@ -72,6 +63,30 @@ def generate_synthetic_bars(
     return bars
 
 
+class LocalParquetProvider:
+    def download_symbol(
+        self,
+        base_path: str | Path,
+        symbol: str,
+        timeframe: str,
+        start: str,
+        end: str,
+    ) -> DownloadResult:
+        bars = generate_synthetic_bars(symbol=symbol, timeframe=timeframe, start=start, end=end)
+        result: WriteResult = write_bars(
+            base_path=base_path,
+            symbol=symbol,
+            timeframe=timeframe,
+            bars=bars,
+        )
+        return DownloadResult(
+            symbol=symbol.upper(),
+            timeframe=timeframe,
+            input_rows=result.input_rows,
+            total_rows=result.total_rows,
+        )
+
+
 def download_symbol(
     base_path: str | Path,
     symbol: str,
@@ -79,16 +94,12 @@ def download_symbol(
     start: str,
     end: str,
 ) -> DownloadResult:
-    bars = generate_synthetic_bars(symbol=symbol, timeframe=timeframe, start=start, end=end)
-    result: WriteResult = write_bars(
+    """Backward-compatible function wrapper."""
+    provider = LocalParquetProvider()
+    return provider.download_symbol(
         base_path=base_path,
         symbol=symbol,
         timeframe=timeframe,
-        bars=bars,
-    )
-    return DownloadResult(
-        symbol=symbol.upper(),
-        timeframe=timeframe,
-        input_rows=result.input_rows,
-        total_rows=result.total_rows,
+        start=start,
+        end=end,
     )
