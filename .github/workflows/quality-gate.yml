@@ -37,45 +37,17 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install tooling
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ruff mypy pytest
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync --extra dev
 
       - name: Ruff
-        run: |
-          if ! git ls-files '*.py' | grep -q .; then
-            echo "No Python files yet; skipping ruff."
-            exit 0
-          fi
-          ruff check .
+        run: uv run ruff check .
 
       - name: Mypy
-        run: |
-          if ! git ls-files '*.py' | grep -q .; then
-            echo "No Python files yet; skipping mypy."
-            exit 0
-          fi
-          if [ -d py/src ]; then
-            mypy py/src
-          elif [ -d src ]; then
-            mypy src
-          else
-            echo "Python files detected, but expected source directory py/src or src is missing."
-            exit 1
-          fi
+        run: uv run mypy
 
       - name: Pytest
-        run: |
-          if ! git ls-files '*.py' | grep -q .; then
-            echo "No Python files yet; skipping pytest."
-            exit 0
-          fi
-          if [ -d py/tests ]; then
-            pytest -q py/tests
-          elif [ -d tests ]; then
-            pytest -q tests
-          else
-            echo "Python files detected, but no tests directory found (expected py/tests or tests)."
-            exit 1
-          fi
+        run: uv run pytest
