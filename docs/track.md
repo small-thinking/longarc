@@ -42,6 +42,11 @@ Track milestone progress, quality controls, and verification history.
 - Added runner scripts `/Users/Yexi/source/longarc/scripts/run_backtest.sh` and `/Users/Yexi/source/longarc/scripts/run_paper.sh`.
 - Added baseline smoke tests at `/Users/Yexi/source/longarc/tests/test_package_smoke.py`.
 - Updated `/Users/Yexi/source/longarc/README.md` with a quick-start CLI command.
+- Added parquet-backed data storage at `/Users/Yexi/source/longarc/src/longarc/data/store.py` with sorting, deduplication, and idempotent writes by timestamp.
+- Added local parquet provider at `/Users/Yexi/source/longarc/src/longarc/data/providers/local_parquet.py` with deterministic synthetic bar generation for `1m`/`1h`/`1d`.
+- Implemented `data download` and `data show-latest` CLI behaviors in `/Users/Yexi/source/longarc/src/longarc/cli.py`.
+- Added data-layer tests at `/Users/Yexi/source/longarc/tests/test_data_store.py` and `/Users/Yexi/source/longarc/tests/test_cli_data.py`.
+- Added `pyarrow` runtime dependency in `/Users/Yexi/source/longarc/pyproject.toml` and refreshed `/Users/Yexi/source/longarc/uv.lock`.
 
 ### Verification
 
@@ -53,3 +58,6 @@ Track milestone progress, quality controls, and verification history.
 - `uv run ruff check .`
 - `uv run mypy`
 - `uv run mypy src`
+- `uv run ruff check .` (pass)
+- `uv run mypy src` (pass)
+- `uv run pytest` (pass, 8 tests)

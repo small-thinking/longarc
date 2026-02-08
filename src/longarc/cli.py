@@ -9,17 +9,51 @@ from typing import Any, Callable, cast
 
 from longarc.core.config import load_config
 from longarc.core.logging import configure_logging
+from longarc.data.providers.local_parquet import download_symbol
+from longarc.data.store import read_bars
 
 LOGGER = logging.getLogger(__name__)
 
 
-def _data_download(_args: argparse.Namespace) -> int:
-    LOGGER.info("data download not implemented yet")
+def _data_download(args: argparse.Namespace) -> int:
+    for symbol in args.symbols:
+        result = download_symbol(
+            base_path=args.data_path,
+            symbol=symbol,
+            timeframe=args.timeframe,
+            start=args.start,
+            end=args.end,
+        )
+        LOGGER.info(
+            "Downloaded %s %s bars: input_rows=%s total_rows=%s",
+            result.symbol,
+            result.timeframe,
+            result.input_rows,
+            result.total_rows,
+        )
     return 0
 
 
-def _data_show_latest(_args: argparse.Namespace) -> int:
-    LOGGER.info("data show-latest not implemented yet")
+def _data_show_latest(args: argparse.Namespace) -> int:
+    bars = read_bars(base_path=args.data_path, symbol=args.symbol, timeframe=args.timeframe)
+    if not bars:
+        LOGGER.info(
+            "No bars found for symbol=%s timeframe=%s in %s",
+            args.symbol.upper(),
+            args.timeframe,
+            args.data_path,
+        )
+        return 0
+
+    latest = bars[-1]
+    LOGGER.info(
+        "Latest %s %s bar: timestamp=%s close=%.4f volume=%.2f",
+        args.symbol.upper(),
+        args.timeframe,
+        latest["timestamp"].isoformat(),
+        latest["close"],
+        latest["volume"],
+    )
     return 0
 
 
@@ -54,8 +88,19 @@ def build_parser() -> argparse.ArgumentParser:
     data_parser = subparsers.add_parser("data", help="Data commands")
     data_subparsers = data_parser.add_subparsers(dest="data_command", required=True)
     data_download = data_subparsers.add_parser("download", help="Download market data")
+    data_download.add_argument("--symbols", nargs="+", required=True, help="Ticker symbols")
+    data_download.add_argument("--timeframe", default="1d", help="Bar timeframe: 1m, 1h, 1d")
+    data_download.add_argument(
+        "--start", required=True, help="Inclusive start date, e.g. 2020-01-01"
+    )
+    data_download.add_argument("--end", required=True, help="Inclusive end date, e.g. 2024-01-01")
+    data_download.add_argument("--data-path", default="./data", help="Base path for local data")
     data_download.set_defaults(handler=_data_download)
+
     data_latest = data_subparsers.add_parser("show-latest", help="Show latest market data")
+    data_latest.add_argument("--symbol", required=True, help="Ticker symbol")
+    data_latest.add_argument("--timeframe", default="1d", help="Bar timeframe: 1m, 1h, 1d")
+    data_latest.add_argument("--data-path", default="./data", help="Base path for local data")
     data_latest.set_defaults(handler=_data_show_latest)
 
     backtest = subparsers.add_parser("backtest", help="Run backtest")
