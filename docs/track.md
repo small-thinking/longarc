@@ -30,6 +30,7 @@ Track milestone progress, quality controls, and verification history.
 
 ### 2026-02-08
 
+- Updated `/Users/Yexi/source/longarc/.codex/skills/longarc-development/SKILL.md` to require pulling latest remote `main` and creating a fresh branch from updated `main` before development, unless the user explicitly asks for a different workflow.
 - Updated `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` to install dependencies with `uv sync --extra dev` instead of `uv pip install`, to avoid environment resolution failures on GitHub runners.
 - Added project metadata and tooling config at `/Users/Yexi/source/longarc/pyproject.toml`.
 - Added package scaffold files under `/Users/Yexi/source/longarc/src/longarc/`.
@@ -43,6 +44,7 @@ Track milestone progress, quality controls, and verification history.
 
 ### Verification
 
+- Not run (documentation/skill instruction update only).
 - `bash scripts/ci/validate_governance.sh`
 - `uv sync --extra dev`
 - `uv run python -m longarc.cli --help`
