@@ -9,7 +9,7 @@ Track milestone progress, quality controls, and verification history.
 | Milestone | Status | Notes |
 | --- | --- | --- |
 | M0 | Completed | Python package scaffold, config/logging modules, CLI skeleton, and baseline tests added. |
-| M1 | In progress | `uv`-based quality workflow and governance checks added; data layer implementation pending. |
+| M1 | In progress | `uv`-based quality workflow and governance checks added; provider abstraction + Polygon real-data ingestion path added. |
 
 ## Change Log
 
@@ -52,6 +52,13 @@ Track milestone progress, quality controls, and verification history.
 - Added PR metadata validator at `/Users/Yexi/source/longarc/scripts/ci/validate_pr_metadata.py` and wired it into `/Users/Yexi/source/longarc/.github/workflows/quality-gate.yml` as a pull-request check.
 - Added tests for PR metadata validation behavior at `/Users/Yexi/source/longarc/tests/test_pr_metadata_validation.py`.
 - Updated governance validation script at `/Users/Yexi/source/longarc/scripts/ci/validate_governance.sh` to require the PR metadata autofill workflow and validator script.
+- Added provider contract and registry at `/Users/Yexi/source/longarc/src/longarc/data/providers/base.py` and `/Users/Yexi/source/longarc/src/longarc/data/providers/registry.py` to support pluggable data adapters.
+- Added Polygon aggregates provider at `/Users/Yexi/source/longarc/src/longarc/data/providers/polygon.py` and wired `data download` provider selection into `/Users/Yexi/source/longarc/src/longarc/cli.py`.
+- Updated `/Users/Yexi/source/longarc/src/longarc/data/providers/local_parquet.py` to provide a class-based adapter (`LocalParquetProvider`) alongside the existing function wrapper.
+- Updated `/Users/Yexi/source/longarc/tests/test_cli_data.py` with a mocked Polygon CLI download test.
+- Added `/Users/Yexi/source/longarc/tests/test_polygon_provider.py` to verify Polygon provider persistence behavior and registry validation.
+- Updated `/Users/Yexi/source/longarc/README.md` to document implemented data capabilities and provider usage.
+- Updated `/Users/Yexi/source/longarc/.env.example` to include `POLYGON_API_KEY`.
 
 ### Verification
 
@@ -70,3 +77,4 @@ Track milestone progress, quality controls, and verification history.
 - `bash scripts/ci/validate_governance.sh`
 - `UV_CACHE_DIR=.uv-cache uv run pytest`
 - `UV_CACHE_DIR=.uv-cache uv run ruff check .`
+- `UV_CACHE_DIR=.uv-cache uv run mypy src`

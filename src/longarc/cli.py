@@ -4,20 +4,23 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import Any, Callable, cast
 
 from longarc.core.config import load_config
 from longarc.core.logging import configure_logging
-from longarc.data.providers.local_parquet import download_symbol
+from longarc.data.providers.registry import get_provider
 from longarc.data.store import read_bars
 
 LOGGER = logging.getLogger(__name__)
 
 
 def _data_download(args: argparse.Namespace) -> int:
+    api_key = args.api_key or os.environ.get("POLYGON_API_KEY")
+    provider = get_provider(args.provider, api_key=api_key)
     for symbol in args.symbols:
-        result = download_symbol(
+        result = provider.download_symbol(
             base_path=args.data_path,
             symbol=symbol,
             timeframe=args.timeframe,
@@ -89,11 +92,21 @@ def build_parser() -> argparse.ArgumentParser:
     data_subparsers = data_parser.add_subparsers(dest="data_command", required=True)
     data_download = data_subparsers.add_parser("download", help="Download market data")
     data_download.add_argument("--symbols", nargs="+", required=True, help="Ticker symbols")
+    data_download.add_argument(
+        "--provider",
+        default="local_parquet",
+        help="Data provider (local_parquet, polygon)",
+    )
     data_download.add_argument("--timeframe", default="1d", help="Bar timeframe: 1m, 1h, 1d")
     data_download.add_argument(
         "--start", required=True, help="Inclusive start date, e.g. 2020-01-01"
     )
     data_download.add_argument("--end", required=True, help="Inclusive end date, e.g. 2024-01-01")
+    data_download.add_argument(
+        "--api-key",
+        default="",
+        help="Provider API key (or set POLYGON_API_KEY for polygon provider)",
+    )
     data_download.add_argument("--data-path", default="./data", help="Base path for local data")
     data_download.set_defaults(handler=_data_download)
 
