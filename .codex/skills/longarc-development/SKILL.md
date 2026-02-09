@@ -5,26 +5,26 @@ description: Use this skill for LongArc repository changes to enforce testing, c
 
 # LongArc Development Skill
 
-Use this skill whenever making code, CI, or documentation updates in this repository.
+Use this skill for any code, CI, or documentation change in this repository.
 
-## Required Rules
+## Non-Negotiables
 
-1. Always add corresponding test.
-2. When updating the code, prepare a clear title, a human-readable description, and a concrete test plan.
-3. Add or update the tracking document.
-4. Unless the user explicitly specifies a different workflow, always sync from remote `main` first and create a new branch from that updated `main` before continuing development.
-5. For each new request or feature, treat PR creation/update as the default final step and ensure it includes a clear title, description, and test plan.
-6. Treat PR metadata as a required delivery artifact: do not consider the task complete until the PR title and body are updated to match `.github/pull_request_template.md`.
-7. If PR metadata cannot be updated from the environment (for example missing `gh` or missing auth), explicitly report that blocker and provide a ready-to-paste PR title/body in the final response.
+1. Always add corresponding test for behavior changes.
+2. Keep changes milestone-scoped and minimal.
+3. Update both `README.md` and `docs/track.md` after every repo change.
+4. Write doc updates from product perspective: capability/status, user impact, and current limits.
+5. Default git flow: sync `main`, branch from updated `main`, then implement.
+6. Default final step for each feature/request: open or update the PR.
+7. PR title/body must be complete and match `.github/pull_request_template.md`.
+8. If PR update is blocked (tooling/auth), report blocker and provide ready-to-paste PR title/body.
 
 ## Workflow
 
-1. Sync local state from remote `main` (for example: `git checkout main`, `git pull origin main`).
-2. Create a fresh working branch from the updated `main` (unless the user asked to stay on an existing branch).
-3. Read `docs/plan.md` and map the task to the current milestone.
-4. Implement the smallest change set that satisfies the milestone scope.
-5. Add or update tests, then run local checks.
-6. Update `docs/track.md` with what changed and how it was verified.
-7. Ensure PR notes follow `.github/pull_request_template.md`.
-8. For each new request/feature, finish by opening or updating the PR (default last step) with a complete title, description, and test plan.
-9. Before finalizing, verify PR metadata is actually present on the PR (not just drafted locally). If verification is blocked by tooling/auth, surface the blocker and include exact PR-ready content.
+1. `git checkout main` and `git pull` (unless user asks otherwise).
+2. Create/continue the target branch.
+3. Read `docs/plan.md` and map work to current milestone.
+4. Implement the smallest valid change.
+5. Run relevant tests/checks.
+6. Update `README.md` and `docs/track.md` (product perspective).
+7. Open/update PR with complete metadata and test plan.
+8. Verify PR metadata is present on GitHub; if blocked, report and provide exact content.
