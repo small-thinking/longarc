@@ -44,4 +44,4 @@ uv run pytest
 bash scripts/ci/validate_governance.sh
 ```
 
-[Current plan](docs/plan.md) · [Progress](docs/track.md)
+[Current plan](docs/plan.md) · [High-level work note](docs/track.md)
