@@ -9,6 +9,7 @@ from typing import Any, Callable, cast
 
 from longarc.analytics.cli import add_parser as add_calc_parser
 from longarc.core.logging import configure_logging
+from longarc.data.options_cli import add_parser as add_options_parser
 from longarc.data.providers.registry import get_provider
 from longarc.data.store import read_bars
 from longarc.storage.cli import add_parser
@@ -96,6 +97,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_parser(subparsers)
     add_calc_parser(subparsers)
+    add_options_parser(subparsers)
     return parser
 
 

@@ -10,6 +10,15 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Candidate collection, sparse history and costs
+
+- Added a bounded read-only Schwab browser bridge, partial capture ingestion, exact-contract histories and pooled DTE/Delta/interval descriptive statistics. Missing sessions/fields remain explicit; no interpolated prices or intraday crossing claims.
+- Added dated fee assumptions and audited option-leg net scenarios, actual-fee overrides and spread/slippage handling. Unknown extra costs do not become zero.
+- Schema remains v2 with no DDL or migration; new versioned payloads reuse observations. Existing records remain unchanged. Private captures stay excluded from Git.
+- Validation: 114 Python tests, 4 Node bridge tests, lint/types and governance; browser smoke capture and database readback verified. PR pending; no merge or daily schedule activated.
+- Remaining: unattended API/full-listed-chain access, exact exchange calendar, fill reconciliation and policy validation. Browser window coverage is not full-chain completeness.
+
+
 ### 2026-09-20 — Preference and read-only session handoff
 
 - Consolidated confirmed preferences, conflicting historical parameter candidates and unresolved limits in the existing local private context entrypoint. Historical defaults were not promoted to approved policy.

@@ -1,6 +1,6 @@
 # One-session Schwab read-only analysis
 
-Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. This runbook is a manual browser-assisted workflow, not a deployed collector, scheduler or approved numerical strategy.
+Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. This runbook includes a repeatable browser-assisted collector; it is not an unattended service, scheduler or approved numerical strategy.
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
 
@@ -65,3 +65,24 @@ A later summary should show observed episode counts, their sampling cadence/comp
 ## Completion criteria
 
 The report identifies the observed account state and as-of times, the limited candidate universe, explicit assumptions, computed scenarios, missing facts and stored record IDs. Distinguish premium cash received, scenario option P&L and total portfolio return; do not invent expected returns. No order is executed. If a smaller model is used later, judge it by this same evidence/readback checklist; this document does not establish its reliability in advance.
+
+
+## Repeatable candidate capture and history
+
+Use `scripts/collect_schwab_chain.js` inside the installed Codex browser runtime with the current documented tab binding. It exports `collectSchwabChain(tab, options, observe)`; it is not a standalone browser driver. Read current page state before invoking it. Pass observed expiry dates, strike centers, optional exact watched contracts and independently observed underlying price/time. The `observe` callback must refresh browser state after each action. `includeGreeks: true` enables the visible IV/Gamma/Vega/size columns through Customize. Only research-page controls are used.
+
+The bridge reads bounded expiry/strike windows, retries empty reads up to three times, and returns successful slices plus errors if later collection fails. Save its returned JSON verbatim under ignored `private/`; verify transfer against the returned rows before ingesting. Do not reconstruct missing cells or use cookies/private network requests. Login, changed dialogs or unsupported page state stop the run. The caller must report a storage failure rather than claiming a completed sample.
+
+Schwab's All setting can still show only a strike window. Add explicit centers for wider coverage and inspect recorded ranges; requested-window coverage is distinct from the entire listed chain. The importer deduplicates overlapping windows, preserves raw slices, excludes placeholder rows and records malformed fields. Unknown multiplier and quote/Greek source times stay null. Capture time is the analysis clock, not a fabricated exchange timestamp. IV without a displayed percent sign retains provider units and cannot be pooled as a normalized IV.
+
+```bash
+uv run python -m longarc.cli options ingest --db private/longarc.sqlite3 --file private/capture.json
+uv run python -m longarc.cli options history --db private/longarc.sqlite3 --start 2026-09-20 --end 2026-10-23 --json-output private/history.json --markdown-output private/history.md
+uv run python -m longarc.cli options costs --db private/longarc.sqlite3 --file private/cost-request.json --fees config/options-costs.json
+```
+
+History reads `option-chain-v1` capture batches; earlier generic calculation records remain preserved but are not silently converted. It separates exact-contract/source series and reports observed midpoint and Delta changes with elapsed time. Cross-contract descriptives group intervals by initial DTE, Delta and elapsed-time buckets. These are correlated descriptive samples, not independent trials or causal estimates. Sparse intervals are retained without interpolation, daily forward-filling or claims about intraday paths. Missing source timestamps are permitted and labeled; known invalid/future times suppress affected metrics. Repeated known source observations are collapsed; unknown-time repeats cannot be proven fresh.
+
+Coverage reports missing dates, missing watched contracts/expiries, incomplete batches and query truncation. Default expected dates are weekdays, not an exchange holiday calendar; pass `--expected-dates` with a JSON list of actual sessions for an exact check (an empty list disables expected-day checks). A one-point series has no trend. Collection is one run; a scheduler determines when to invoke it. No daily automation is activated by installing this bridge.
+
+Costs use explicit contract count/multiplier and microdollar money inputs. See `tests/test_cost_journal.py` for a complete synthetic request envelope. Every calculation stores the dated schedule, inputs, evidence IDs and code fingerprint. `config/options-costs.json` records standard online commission assumptions; actual total fees override them. Ask-based buybacks already include spread relative to midpoint, so spread is not deducted twice. Additional slippage is explicit. Unknown exchange/other fees leave final net P&L unknown while showing the known-cost subtotal. Rates are dated assumptions, not immutable constants. These are option-leg scenarios, not reconciled portfolio returns.
