@@ -16,7 +16,7 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - Every run preserves resolved inputs, IDs/hash, timestamps, source/quality, code fingerprint, metrics and missing/error reasons. Repeated requests are idempotent; current positions are never inferred from opening lots. Schema remains v2; optional underlying timestamp lives in snapshot JSON without changing existing retry hashes.
 - Validation: 74 tests, lint and type checks pass. Isolated CLI dry run covered multiple opening lots, repeated snapshots, exact-ID history, synthetic arithmetic, idempotent retry, readback hashes and backup. The authorized existing Schwab tab supplied one quote-only dry run; absent quote/Greek times and multiplier remain unknown. No actual holdings imported; the main database's three business tables remain empty.
 - Reviewed the old calculator's formulas; kept the explicit micro-unit input contract and unknown-value behavior. Strategy thresholds unchanged. Next: source freshness/units and policy contract, then manual fill reconciliation. No automatic observation schedule or trading readiness is claimed.
-- This increment is prepared as a new PR, not merged.
+- This increment is [PR #14](https://github.com/small-thinking/longarc/pull/14), open for review and not merged.
 
 ### 2026-09-20 — Multiple opening lots and quote history
 
