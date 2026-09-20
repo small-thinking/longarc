@@ -159,6 +159,7 @@ def build_report(
                     delta = None
                 point = {"record_id": row["record_id"], "contract": identity, "source": src,
                          "captured_at": captured.isoformat(), "date": day.isoformat(),
+                         "closed_session": payload["inputs"].get("closed_session"),
                          "dte": (expiry - day).days, "snapshot": snap,
                          "mid_u": (bid + ask) / 2 if bid is not None and ask is not None
                          and valid_price else None,
@@ -202,6 +203,10 @@ def build_report(
             unique.append(point)
         changes = []
         for previous, current in zip(unique, unique[1:]):
+            # Collection time is not a market clock for a closed-session endpoint.
+            # Keep it for audit, including against older untagged observations.
+            if previous.get("closed_session") or current.get("closed_session"):
+                continue
             elapsed = _time(current["captured_at"]) - _time(previous["captured_at"])
             hours = elapsed.total_seconds() / 3600
             if hours <= 0:

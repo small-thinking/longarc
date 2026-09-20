@@ -102,3 +102,37 @@ Suggested request: “Use the LongArc read-only workflow to read the current Sch
 After capture/calculation, use `options decide` with the current explicit policy JSON and verified facts; see [decision and actual-result contracts](calculations.md#deterministic-decisions-and-actual-results). Retain the decision ID/hash. The caller records evidence for usability/dividend/position checks and distinguishes unknown from false; the rule script does not verify those claims independently. Historical patterns and LLM commentary cannot bypass an existing policy trigger.
 
 After a user-reported execution, inspect supplied or authorized visible execution confirmation and record actual fills/fees using `options execution-add`; a recommendation or submitted/unfilled order is not a fill. Record partial executions separately with stable IDs and link each close to its opening. Preserve policy/decision IDs, use the same episode through roll legs, and verify writes. Use `options performance` to report recorded cumulative option results with its open-risk/stock-P&L limits. No transaction is executed by these tools.
+
+## Selected-row records and ad-hoc reports
+
+Every new quote review must use `options ingest` before downstream calculations,
+and reference its returned record ID. Prefer the browser bridge's canonical
+`schwab-browser-chain-v1` envelope even for selected rows: retain headers, explicit
+expiry per slice, captured time, available source times, requested coverage and
+errors. Do not save quotes only inside a generic narrative observation. Prob. OTM
+and Prob. Touching columns are normalized when displayed with percent units.
+
+Existing `manual-schwab-selected-rows-v1` files are accepted through `--file`.
+For previously logged supported manual collectors, use:
+
+```bash
+uv run python -m longarc.cli options ingest --db private/longarc.sqlite3 --observation-id SOURCE_ID --closed-session YYYY-MM-DD
+```
+
+Use the closed-session flag only under the verification rule above. An explicit
+`results.closed_session` on source evidence is preserved; a conflicting flag fails.
+Intervals with a tagged closed-session endpoint are excluded from changes because
+collection elapsed time is not market elapsed time. Older pairs with neither
+endpoint tagged remain unverified; the importer cannot reconstruct their session. The importer
+supports `manual-evidence-v1` selected tables and `manual-tenor-comparison-v1`
+explicit expiry rows. Other layouts fail rather than guessing. It preserves the
+original record, links derived evidence, retains original capture time and mode,
+and does not inherit missing fields from prose or other observations. Repeating
+the same import returns the existing normalized record. Make a database backup
+before a historical import and verify counts, readback and source preservation.
+
+Generate history whenever requested; no recurring report is necessary. Repeated
+closed-session reads remain audit points but do not produce price/delta change
+intervals, including comparisons against older untagged records. Missing active-session paths cannot be recovered by
+format conversion. The history report describes observations; it does not simulate
+entry, buy-to-close, roll costs, assignment or monthly expected income.
