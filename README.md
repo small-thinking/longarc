@@ -16,7 +16,7 @@ Multiple short-call opening lots can each retain repeated price/Greek snapshots 
 
 ## Read-only session handoff
 
-The existing `longarc-development` skill routes manual analysis to the maintained context and runbook. Consolidate new information into the existing owning file; create new files only when necessary. Start each manual account/chain analysis with the local `private/qqq-covered-call-plan/README.md` and [Schwab read-only runbook](docs/schwab-readonly.md). The runbook records source checks and logging conventions; it is not a deployed browser collector or numerical policy. Calculation tooling is in [PR #14](https://github.com/small-thinking/longarc/pull/14); check the current checkout before invoking it.
+The existing `longarc-development` skill routes manual analysis to the maintained context and runbook. Consolidate new information into the existing owning file; create new files only when necessary. Start each manual account/chain analysis with the local `private/qqq-covered-call-plan/README.md` and [Schwab read-only runbook](docs/schwab-readonly.md). Contract selection can begin with per-unit comparisons, while total exposure needs observed quantities. The runbook records source checks and logging conventions; it is not a deployed browser collector or numerical policy. Calculation tooling is in [PR #14](https://github.com/small-thinking/longarc/pull/14); check the current checkout before invoking it.
 
 ## Storage tools
 

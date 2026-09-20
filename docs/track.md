@@ -13,6 +13,7 @@ SQLite was selected and the local observation storage slice is implemented. The 
 ### 2026-09-20 — Preference and read-only session handoff
 
 - Consolidated confirmed preferences, conflicting historical parameter candidates and unresolved limits in the existing local private context entrypoint. Historical defaults were not promoted to approved policy.
+- Clarified that single-contract comparisons do not require preset sizing; totals still require observed quantities. Latest user choices replace old candidates in the private context/policy, with unresolved definitions explicitly retained.
 - Wired the existing project skill to the private context and runbook; recorded consolidation into existing files as the default. No new skill or duplicate context.
 - Added a manual Schwab runbook for fresh account/chain reads, completeness and timestamp checks, exact-tool calculations, and source/analysis record readback. No new collector, decision engine, schema or runtime code.
 - PR #14 remains open at this check; the next session must verify its calculation dependency. This turn completes preparation only: no new account read, recommendation, dry run, schedule or trade.
