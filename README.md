@@ -1,57 +1,35 @@
 # LongArc
-Low-frequency, audit-first trading system evolving toward agentic workflows.
 
-## Status (as of 2026-02-09)
+Local investment tooling being rebuilt around the QQQ covered-call plan.
 
-Current stage: M0 scaffold complete, M1 not implemented yet.
+## Current scope
 
-- Python package `longarc` with install/run via `uv`.
-- Config schema + YAML loading (`src/longarc/core/config.py`).
-- Structured logging bootstrap (`src/longarc/core/logging.py`).
-- CLI surface (`src/longarc/cli.py`): `data download`, `data show-latest`, `backtest`, `paper-sim run`, `paper run`, `report`.
-- CI quality gate (governance + lint + type check + tests) in GitHub Actions.
-- Contributor workflow now enforces product-facing status updates in both README and tracking after every change.
+The only active product plan is the migrated QQQ strategy: infrequent manual trades, frequent observation and deterministic calculations, and complete records. Start with `private/qqq-covered-call-plan/README.md` in the local investment workspace. The five personal planning files are excluded from Git and are not included in a fresh clone.
 
-Not implemented yet:
-- Real market data download/storage logic.
-- Backtest engine.
-- Paper simulation engine.
-- Live paper broker adapters.
-- Report generation logic.
+Next: audit the reusable foundation, select and establish the database, and add controlled read/write and recovery. The database, option-chain collection, analysis, trade records, alerts and complete workflow are **not implemented**.
 
-All CLI business commands currently log "not implemented yet" and exit successfully.
+The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
 
-## Quick Start
+## Retained utilities
 
-- Python 3.11+
-- `uv`
+- Python package, logging, CLI and quality checks.
+- OHLCV provider interface, a Polygon adapter, and a Parquet store with deduplication tests.
+- A deterministic synthetic bar generator for development only.
+
+These utilities are candidates for reuse, not a validated options data pipeline. Every download must specify its provider. `local_parquet` generates synthetic bars; it does not retrieve market prices. Data-source entitlements, provenance and production storage remain part of the new implementation work.
+
+## Development
+
+Python 3.11+ and `uv`:
 
 ```bash
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run python -m longarc.cli --help
-uv run python -m longarc.cli data download
-uv run python -m longarc.cli backtest --config config/config.example.yaml
-uv run python -m longarc.cli paper-sim run --config config/config.example.yaml
-uv run python -m longarc.cli paper run --config config/config.example.yaml
-uv run python -m longarc.cli report --run-id demo-001
-bash scripts/run_backtest.sh
-bash scripts/run_paper.sh
+uv run python -m longarc.cli data download --provider local_parquet --symbols QQQ --start 2024-01-01 --end 2024-01-03 --data-path ./private/synthetic-bars
+uv run python -m longarc.cli data show-latest --symbol QQQ --data-path ./private/synthetic-bars
 ```
 
-## Configuration
-
-Config example: `config/config.example.yaml`
-
-- `mode`: `backtest` / `paper_sim` / `paper` (future behavior)
-- `universe`: symbols + timeframe
-- `data`: provider + local path
-- `broker`: adapter type
-- `strategy`: strategy name + params
-- `portfolio`, `risk`, `cost_model`, `runtime`
-
-Current behavior: config is validated and loaded, but not yet executed by a strategy/backtest/paper engine.
-
-## Dev Checks
+For the existing read-only Polygon adapter, select `--provider polygon`, set `POLYGON_API_KEY` in the process environment, and use a separate data directory. `.env.example` is a reference; the CLI does not automatically load `.env` files.
 
 ```bash
 uv run ruff check .
@@ -60,16 +38,4 @@ uv run pytest
 bash scripts/ci/validate_governance.sh
 ```
 
-## Repo Map
-
-```text
-config/                  Example app configuration
-docs/                    Plan and progress tracking
-scripts/                 Run helpers and CI governance check
-src/longarc/cli.py       CLI entrypoint
-src/longarc/core/        Config and logging modules
-tests/                   Smoke tests
-```
-
-Roadmap: `docs/plan.md`  
-Progress log: `docs/track.md`
+[Current plan](docs/plan.md) · [Progress](docs/track.md)
