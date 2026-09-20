@@ -185,13 +185,40 @@ def normalize_capture(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def ingest_capture(path: Path, raw: dict[str, Any], *, mode: str = "observe") -> dict[str, Any]:
+def _without_collection_times(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: _without_collection_times(v) for k, v in value.items()
+                if k not in {"captured_at", "started_at"}}
+    if isinstance(value, list):
+        return [_without_collection_times(v) for v in value]
+    return value
+
+
+def _existing_capture(path: Path, key: str) -> dict[str, Any] | None:
+    with store.connect(path, readonly=True) as db:
+        store.check_schema(db)
+        row = db.execute("SELECT record_id FROM observations WHERE idempotency_key=?",
+                         (key,)).fetchone()
+    return store.get_observation(path, row["record_id"]) if row else None
+
+
+def ingest_capture(path: Path, raw: dict[str, Any], *, mode: str = "observe",
+                   closed_session: str | None = None) -> dict[str, Any]:
     if mode not in ("observe", "shadow"):
         raise ValueError("Capture mode must be observe or shadow")
     result = normalize_capture(raw)
     captured = holdings.timestamp(raw["captured_at"])
+    key = "option-capture:" + store.digest({"mode": mode, "capture": raw})
+    if closed_session is not None:
+        session = date.fromisoformat(closed_session).isoformat()
+        if session > date.fromisoformat(captured[:10]).isoformat():
+            raise ValueError("Closed session cannot be in the future")
+        # Explicit caller assertion: never infer a closed market from unchanged prices.
+        key = "option-closed-v1:" + store.digest({
+            "mode": mode, "session": session, "capture": _without_collection_times(raw),
+        })
     event = {
-        "idempotency_key": "option-capture:" + store.digest({"mode": mode, "capture": raw}),
+        "idempotency_key": key,
         "scope": "options:QQQ", "mode": mode,
         "kind": "observation" if result["quotes"] else "error",
         "observed_at": captured, "source": "schwab_visible_browser",
@@ -202,12 +229,30 @@ def ingest_capture(path: Path, raw: dict[str, Any], *, mode: str = "observe") ->
         "results": result, "evidence_ids": raw.get("evidence_ids", []),
         "policy_hash": None,
     }
-    receipt = store.save_observation(path, event)
-    saved = store.get_observation(path, receipt["record_id"])
-    if saved["payload"]["results"] != result:
-        raise ValueError("Capture readback mismatch")
+    if closed_session is not None:
+        event["inputs"]["closed_session"] = closed_session
+    saved = _existing_capture(path, key)
+    if saved is None:
+        try:
+            receipt = store.save_observation(path, event)
+        except ValueError:
+            # Concurrent equivalent captures can carry different capture clocks.
+            # The unique key selects the first writer without changing its evidence.
+            saved = _existing_capture(path, key)
+            if saved is None:
+                raise
+            receipt = {"status": "existing", "record_id": saved["record_id"]}
+        else:
+            saved = store.get_observation(path, receipt["record_id"])
+            if saved["payload"]["results"] != result:
+                raise ValueError("Capture readback mismatch")
+    else:
+        receipt = {"status": "existing", "record_id": saved["record_id"]}
+    if saved["payload"]["inputs"]["raw_capture"] != raw:
+        receipt = {"status": "existing", "record_id": saved["record_id"]}
+    result = saved["payload"]["results"]
     return {"status": result["status"], "record_id": receipt["record_id"],
             "write_status": receipt["status"], "quote_count": len(result["quotes"]),
             "coverage": result["coverage"], "missing_expiries": result["missing_expiries"],
             "missing_contracts": result["missing_contracts"], "warnings": result["warnings"],
-            "readback_verified": True}
+            "readback_verified": True, "stored_captured_at": saved["observed_at"]}

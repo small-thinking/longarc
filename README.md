@@ -14,6 +14,8 @@ The former generic trading framework has been removed: no backtest/paper/report 
 
 Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). Supplied openings remain provisional; current quantities and actual exits/rolls are not reconciled.
 
+Repeated imports are idempotent. After verifying a closed market, `options ingest --closed-session YYYY-MM-DD` reuses an unchanged capture from that last market session, preserving its original collection time. Changed values or coverage still create a new record; active-market reads retain their separate times.
+
 ## Calculations
 
 Use `uv run python -m longarc.cli calc --db PATH --file REQUEST.json` to calculate quote metrics, history changes, and explicit close/roll scenarios, then log inputs/results for readback. See [formulas, units, logging and dry run](docs/calculations.md). Strategy decisions and current portfolio P&L are not inferred.
