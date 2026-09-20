@@ -14,6 +14,10 @@ The former generic trading framework has been removed: no backtest/paper/report 
 
 Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). Supplied openings remain provisional; current quantities, exits/rolls and strategy calculations are not implemented.
 
+## Read-only session handoff
+
+Start each manual account/chain analysis with the local `private/qqq-covered-call-plan/README.md` and [Schwab read-only runbook](docs/schwab-readonly.md). The runbook records source checks and logging conventions; it is not a deployed browser collector or numerical policy. Calculation tooling is in [PR #14](https://github.com/small-thinking/longarc/pull/14); check the current checkout before invoking it.
+
 ## Storage tools
 
 Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal, not a trading ledger or approval system. No database server needs starting.

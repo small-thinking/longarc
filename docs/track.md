@@ -10,6 +10,13 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Preference and read-only session handoff
+
+- Consolidated confirmed preferences, conflicting historical parameter candidates and unresolved limits in the existing local private context entrypoint. Historical defaults were not promoted to approved policy.
+- Added a manual Schwab runbook for fresh account/chain reads, completeness and timestamp checks, exact-tool calculations, and source/analysis record readback. No new collector, decision engine, schema or runtime code.
+- PR #14 remains open at this check; the next session must verify its calculation dependency. This turn completes preparation only: no new account read, recommendation, dry run, schedule or trade.
+- Validation: documentation/link checks and governance; application tests are unchanged. Next: a separate user-requested dry run using the context and runbook.
+
 ### 2026-09-20 — Multiple opening lots and quote history
 
 - Added migration 2: holding_lots and holding_snapshots, linking repeated checks to distinct short-call opening lots, including same-contract openings. Added narrow JSON CLI read/write tools.
