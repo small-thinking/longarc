@@ -18,6 +18,10 @@ Multiple short-call opening lots can each retain repeated price/Greek snapshots 
 
 Use `uv run python -m longarc.cli calc --db PATH --file REQUEST.json` to calculate quote metrics, history changes, and explicit close/roll scenarios, then log inputs/results for readback. See [formulas, units, logging and dry run](docs/calculations.md). Strategy decisions and current portfolio P&L are not inferred.
 
+## Read-only session handoff
+
+The existing `longarc-development` skill routes manual analysis to the maintained context and runbook. Consolidate new information into the existing owning file; create new files only when necessary. Start each manual account/chain analysis with the local `private/qqq-covered-call-plan/README.md` and [Schwab read-only runbook](docs/schwab-readonly.md). Offline strategy rules are maintained in the existing private context/policy; the runbook does not implement an automatic policy evaluator. Contract selection can begin with per-unit comparisons, while total exposure needs observed quantities. The runbook records source checks, logging conventions and paired exit-threshold research evidence, including sampling gaps and post-close quote-only tracking; it is not a deployed browser collector or numerical policy. Calculation tooling was merged in [PR #14](https://github.com/small-thinking/longarc/pull/14); check the current checkout before invoking it.
+
 ## Storage tools
 
 Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal, not a trading ledger or approval system. No database server needs starting.

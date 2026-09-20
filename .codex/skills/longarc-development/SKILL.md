@@ -1,11 +1,21 @@
 ---
 name: longarc-development
-description: Use this skill for LongArc repository changes to enforce testing, clear change descriptions, and tracking document updates.
+description: Use for LongArc repository changes or user-requested Schwab read-only QQQ analysis. Routes analysis to the local context and runbook; enforces reviewable repository changes.
 ---
 
 # LongArc Development Skill
 
-Use this skill for any code, CI, or documentation change in this repository.
+Choose the mode matching the user's request. Read-only analysis does not require code changes, Git publishing, or a new skill.
+
+## Read-only QQQ analysis
+
+For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). Paths are relative to the repository root unless linked otherwise. Use available browser tools for current page state and existing calculation tools for arithmetic. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
+
+## Consolidation
+
+Update the existing file that owns new information. Prefer the private context/policy for personal decisions, the runbook for browser procedures, and `docs/track.md` for high-level progress. Create a new file only when existing files cannot reasonably serve the purpose; do not create a new context, handoff, skill, or progress log for each session. Replace superseded active guidance and retain only useful provenance or concise change history.
+
+The development rules below apply to repository changes, not ordinary read-only analysis.
 
 ## Non-Negotiables
 
