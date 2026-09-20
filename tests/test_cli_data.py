@@ -14,6 +14,8 @@ def test_data_download_and_show_latest(tmp_path) -> None:  # type: ignore[no-unt
                 "INFO",
                 "data",
                 "download",
+                "--provider",
+                "local_parquet",
                 "--symbols",
                 "AAPL",
                 "MSFT",

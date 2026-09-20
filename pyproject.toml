@@ -5,13 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "longarc"
 version = "0.1.0"
-description = "Low-frequency, audit-first trading system evolving toward agentic workflows."
+description = "Local investment tooling for the QQQ covered-call plan."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "pydantic>=2.6.0",
   "pyarrow>=18.0.0",
-  "PyYAML>=6.0.0",
 ]
 
 [project.optional-dependencies]
