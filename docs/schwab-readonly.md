@@ -6,7 +6,7 @@ The existing [longarc-development skill](../.codex/skills/longarc-development/SK
 
 ## Before reading
 
-1. Confirm the current checkout exposes the required CLI. The calculation implementation is PR #14; its merge/checkout state must be checked, not assumed from this document. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
+1. Confirm the current checkout exposes the required CLI. The calculation implementation was merged in PR #14. An older checkout may still lack it. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
 2. Use the installed browser-use tool and its current instructions to locate the existing authorized Schwab tab. Discover tabs and page state afresh; never reuse tab IDs/selectors from an earlier session. Ordinary read-only navigation, expiry selectors and scrolling are sufficient. Do not click bid/ask trade buttons, order builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker.
 3. Create a unique run identifier and explicit UTC capture start/end times. This is one user-requested run. No autonomous schedule, credentials storage or background monitoring is implied.
 

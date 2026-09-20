@@ -1,0 +1,38 @@
+{
+  "idempotency_key": "synthetic-calc-v1",
+  "scope": "synthetic:quote-demo",
+  "mode": "shadow",
+  "source": "synthetic_fixture",
+  "quality": "synthetic",
+  "as_of": "2026-09-20T16:00:00Z",
+  "evidence_ids": [
+    "examples/calculation.json"
+  ],
+  "inputs": {
+    "contract": {
+      "symbol": "QQQ",
+      "option_type": "CALL",
+      "expiry_date": "2026-10-16",
+      "strike_u": 740000000,
+      "multiplier": 100
+    },
+    "snapshot": {
+      "captured_at": "2026-09-20T16:00:00Z",
+      "quote_at": "2026-09-20T15:59:00Z",
+      "greeks_at": "2026-09-20T15:59:00Z",
+      "underlying_at": "2026-09-20T15:59:00Z",
+      "bid_u": 5000000,
+      "ask_u": 5200000,
+      "underlying_price_u": 720000000,
+      "delta": 0.3,
+      "theta": -0.2
+    },
+    "scenario": {
+      "contracts": 1,
+      "opening_premium_u": 6000000,
+      "opening_fees_u": 650000,
+      "closing_fees_u": 650000,
+      "covered_shares": 100
+    }
+  }
+}

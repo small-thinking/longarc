@@ -52,3 +52,7 @@ Start with a pure bid/ask midpoint and spread function plus a thin read/calculat
 Old calculator review found float money, timezone-naive dates, clipped negative extrinsic value, default multiplier 100, and first-matching holding selection. Do not clone it wholesale. Strategy thresholds do not change merely because more fields can be stored: separate factual metrics from policy decisions. Probabilities, delta thresholds, stop/profit/roll rules and observation frequency remain candidate policy settings requiring independent review.
 
 References: [Schwab delta/probability discussion](https://www.schwab.com/learn/story/options-delta-probability-and-other-risk-analytics), [Schwab Greeks](https://www.schwab.com/options/options-greeks). These support field interpretation, not account/data permission or validation of the screenshot's model.
+
+## Calculation follow-up
+
+[Calculation and audit loop](calculations.md) adds pure metrics and explicit-snapshot history comparisons. Optional `underlying_at` is retained in snapshot JSON, without changing version-2 DDL. Current position quantities remain unreconciled.

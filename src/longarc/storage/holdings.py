@@ -26,6 +26,7 @@ SNAP_REQUIRED = {"idempotency_key", "holding_id", "contract", "captured_at", "so
 SNAP_OPTIONAL = {
     "quote_at",
     "greeks_at",
+    "underlying_at",
     "underlying_price_u",
     "bid_u",
     "ask_u",
@@ -142,12 +143,14 @@ def add_holding(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
 
 def add_snapshot(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     p = fields(payload, SNAP_REQUIRED, SNAP_OPTIONAL)
+    if "underlying_at" not in payload:
+        p.pop("underlying_at")  # Preserve canonical hashes of pre-existing snapshot retries.
     p["contract"] = contract(p["contract"])
     for key in ("idempotency_key", "holding_id", "source"):
         text(p[key], key)
     p["captured_at"] = timestamp(p["captured_at"])
-    for key in ("quote_at", "greeks_at"):
-        if p[key] is not None:
+    for key in ("quote_at", "greeks_at", "underlying_at"):
+        if p.get(key) is not None:
             p[key] = timestamp(p[key])
     for key in ("underlying_price_u", "bid_u", "ask_u", "last_u", "volume"):
         if p[key] is not None:

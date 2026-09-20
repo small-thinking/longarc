@@ -7,6 +7,7 @@ import logging
 import os
 from typing import Any, Callable, cast
 
+from longarc.analytics.cli import add_parser as add_calc_parser
 from longarc.core.logging import configure_logging
 from longarc.data.providers.registry import get_provider
 from longarc.data.store import read_bars
@@ -94,6 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     data_latest.set_defaults(handler=_data_show_latest)
 
     add_parser(subparsers)
+    add_calc_parser(subparsers)
     return parser
 
 

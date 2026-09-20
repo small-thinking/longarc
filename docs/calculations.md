@@ -1,0 +1,57 @@
+# Calculation and audit loop
+
+`longarc calc --db PATH --file REQUEST.json` runs pure short-CALL calculations and appends one observation. It accepts either explicit quote inputs or immutable snapshot IDs. Multiple holdings retain separate histories; no trade is needed to record a new check. This is a calculation dry run, not a policy engine or reconciled trading ledger.
+
+## Run a synthetic example
+
+```bash
+uv run python -m longarc.cli db init --db private/calculation-demo.sqlite3
+uv run python -m longarc.cli calc --db private/calculation-demo.sqlite3 --file examples/calculation.json
+# Repeat: same record_id and write_status=existing, no duplicate event.
+uv run python -m longarc.cli calc --db private/calculation-demo.sqlite3 --file examples/calculation.json
+uv run python -m longarc.cli db get --db private/calculation-demo.sqlite3 --id RETURNED_RECORD_ID
+```
+
+The fixture's midpoint is $5.10, spread $0.20, and explicit one-contract close scenario is $520.65 including closing fees. Net option P&L is $78.70 after both supplied fees. These are synthetic arithmetic examples.
+
+## Request and units
+
+Required top-level fields: `idempotency_key`, `scope`, `mode`, `source`, `quality`, `as_of`, `evidence_ids`, `inputs`. Optional `policy_hash` is a reference only; no policy is evaluated. All timestamps require timezones. `as_of` is explicit and fixed for reproducible retries. Real browser reads use `mode=observe`, `quality=unverified`; fixtures use `shadow`/`synthetic`. The calculator cannot certify inputs as verified.
+
+Inline inputs contain `contract` and `snapshot`; see the example. Contract: `symbol`, `option_type=CALL`, `expiry_date`, `strike_u`, and `multiplier` (null is allowed for quote-only calculations). Money inputs use integer millionths of a dollar per underlying unit (`1 dollar = 1,000,000 u`). Money outputs use decimal strings, preserving half-micro-unit midpoints. Fractions are unitless; `0.10` means 10%. Greeks retain source units, and are not position Greeks or calculated assignment probabilities.
+
+Snapshot fields used: `bid_u`, `ask_u`, `underlying_price_u`, `delta`, `theta`, `quote_at`, `greeks_at`, `underlying_at`, `captured_at`. `last_u` is validated but never substituted for a bid/ask. Extra source evidence such as last price, volume and displayed probabilities can remain in the snapshot and audit record without becoming decision signals.
+
+For a stored holding snapshot, replace inline `contract`/`snapshot` with `snapshot_id`; set `scope` to `holding:<holding_id>` and match its source/quality. Optional `previous_snapshot_id` must belong to the same holding. The adapter reads the exact IDs, not whichever record happens to be latest. It never uses opening quantity as current quantity. Inline history instead uses `previous: {contract, snapshot}` with matching identity and non-decreasing timestamps. Stored holdings must use IDs for history.
+
+## Implemented metrics
+
+| Group | Definition |
+| --- | --- |
+| Quote | midpoint `(bid+ask)/2`, spread `ask-bid`, spread/midpoint |
+| Time | expiry minus New York calendar date (not trading days or precise expiry hours); separate quote, Greeks, underlying and capture ages |
+| Moneyness | signed strike minus underlying; distance/underlying; CALL intrinsic `max(underlying-strike,0)`; midpoint minus intrinsic |
+| Observed Greeks | source delta and theta, with their own timestamp; no fitted IV or new Greeks |
+| History | changes in midpoint, underlying, delta and theta between explicit snapshots |
+| Close scenario | ask × contracts × multiplier; add closing fees; subtract close cost and opening fees from supplied opening credit |
+| Premium captured | `(opening premium - ask)/opening premium`, gross and excluding fees |
+| Coverage scenario | supplied covered shares / (contracts × multiplier), plus uncovered units; not portfolio reconciliation |
+| Roll scenario | replacement bid minus old ask; explicit-quantity net cashflow after both new fees; added calendar days and strike change |
+
+`scenario` accepts only `contracts`, `opening_premium_u` (per unit), `opening_fees_u`, `closing_fees_u` (both total fees for the supplied quantity), and `covered_shares`. Missing quantity, multiplier or fees remain unknown. To inspect a roll, provide `replacement: {contract, snapshot, opening_fees_u}` with the same symbol/type/multiplier. Positive roll cashflow is not profit: the old option's scenario P&L remains separate, and the replacement introduces a new obligation. None of these numbers includes stock P&L, taxes, actual fills or reconciled cumulative episode cashflow.
+
+## What is logged each time
+
+One append-only `observations` row contains the full resolved inputs, snapshot IDs, explicit `as_of`, source/quality, evidence references, policy reference, code fingerprint, input hash, metrics, warnings and status. Stored snapshot IDs also join `evidence_ids`. Repeating the same key/content returns the existing record; changed content with that key fails. A new observation/check requires a new key. `db get` returns the complete audit payload; `db list --scope ...` lists results for a holding or quote study.
+
+Missing inputs produce null outputs and `partial`; crossed quotes produce `invalid` with quote calculations suppressed. Future data are excluded and warned. Negative extrinsic remains visible with a warning, rather than being silently clamped to zero. Each well-formed request is logged even when no trading action occurs or its calculation fails. Malformed calculation inputs are logged as `kind=error`; an invalid request header, unreadable file, invalid JSON, unavailable DB or conflicting idempotency key cannot create a new record and returns an error with null `record_id`. CLI exits nonzero for invalid/error, zero for ok/partial. Always inspect status and warnings.
+
+`ok` means this arithmetic had no missing/invalid-input warnings; it does not mean data are fresh, a strategy passed, or a trade is approved. Ages are returned without inventing a freshness threshold. Missing quote timestamps stay unknown; page refresh time is not quote time. The code fingerprint covers the calculator and logging adapter source, not an external policy or market feed.
+
+## Storage compatibility and remaining work
+
+**No tables, columns, constraints, indexes or migration receipts change.** Schema stays at version 2. `holding_snapshots.payload_json` additionally accepts optional `underlying_at`, validated as a timestamp. It is omitted when absent so retries of pre-existing snapshot payloads keep their original hashes. Generic calculation/error rows use the existing observations table. Backups and readback work unchanged.
+
+The existing local covered-call-advisor formulas were inspected at commit `ce97a394e47334584295e2fef9f87eb027dbe5a9`. The arithmetic definitions inform this implementation, but its float money, implicit multiplier/cashflow defaults, timezone-free dates and clamped extrinsic are incompatible with this storage contract. The new pure layer uses explicit inputs and independent arithmetic tests, with no import of the old policy defaults.
+
+Strategy thresholds remain unchanged and unapproved. Next: specify source freshness/Greek units and a minimal policy contract, then add manual fill/reconciliation records before treating scenarios as current holdings. Automatic collection, scheduling/alerts, candidate ranking, assignment/dividend modeling and live-trading readiness are still separate work.
