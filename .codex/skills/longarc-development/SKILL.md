@@ -12,7 +12,7 @@ Use this skill for any code, CI, or documentation change in this repository.
 1. Always add corresponding test for behavior changes.
 2. Keep each PR to the smallest coherent, reviewable change. Prefer concise, readable code; remove redundancy and avoid speculative abstractions or unrelated refactors. Split independent work to reduce human review effort.
    For database changes, list added/changed/dropped tables and the exact schema delta (columns, types, nullability, keys, constraints and indexes) in the PR, plus migration/data-compatibility impact. State explicitly when there is no schema change.
-3. Update both `README.md` and `docs/track.md` after every repo change.
+3. Update both `README.md` and `docs/track.md` after every repo change. Use `docs/track.md` as the single high-level work note: record each meaningful increment, validation/PR and merge status, remaining limits, and next step. Avoid duplicate progress logs or private account data.
 4. Write doc updates from product perspective: capability/status, user impact, and current limits.
 5. Default git flow: sync `main`, branch from updated `main`, then implement.
 6. Default final step for each feature/request: open or update the PR.

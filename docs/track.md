@@ -1,4 +1,6 @@
-# LongArc Progress Tracking
+# LongArc Work Note
+
+Record a short high-level entry after each meaningful increment: what capability changed, evidence/PR and merge status, remaining limits, and next step. Keep private account and market data out of this note. This is the single long-term progress log.
 
 ## Current work
 
@@ -7,6 +9,15 @@ Rebuild around the migrated QQQ plan. The canonical work packages are in the loc
 SQLite was selected and the local observation storage slice is implemented. The complete QQQ application remains pending. Existing OHLCV utilities are reuse candidates, not completed QQQ work packages. Earlier generic trading milestones are retired; their development history is preserved in Git.
 
 ## Change Log
+
+### 2026-09-20 — Storage merged; clarify transaction tracking
+
+- PR #10 (legacy cleanup) and PR #11 (SQLite foundation) are merged. Local main synchronized to `0d5daec` after #11.
+- Available: initialize, append/read observations, idempotent retries, corrections, health checks and backup/restore. Evidence: 34 tests and local isolated synthetic backup/restore readback; these are the #11 results, not a new test run.
+- Current schema has two tables: migration bookkeeping and generic observations. It can retain repeated measurements, but has no enforced trade/episode relationship, typed quote/Greek contract, or fills ledger yet. A scope string is not a substitute for that model.
+- Next small implementation: define a stable episode identity and link repeated observations to it, with explicit parameter units, timestamps and unknown-value handling. Exact DDL will be proposed in that PR; no schema changes in this documentation update.
+- Then add one independently tested calculation at a time behind a thin read/calculate/record operation. Calculation functions should not perform database I/O. Live collection, scheduling and verified transaction accounting remain later work.
+
 
 ### 2026-09-20 — Review conventions
 
@@ -33,6 +44,6 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Verification
 
-- Regression tests reject retired commands and downloads without an explicit provider.
-- Existing synthetic-data, mocked Polygon, Parquet persistence and PR metadata tests retained.
-- `uv run --no-sync pytest`: 17 passed. Ruff, mypy, governance checks and `git diff --check` passed. CLI help exposes only the retained data commands.
+Latest implementation evidence: PR #11, 34 passing tests plus lint, type and governance checks, with local write/read/retry/backup/restore validation. PR #10's 17-test result is historical and does not describe the current CLI.
+
+This work-note update changes documentation and project guidance only; governance and diff checks apply, with no application or schema change.
