@@ -1,0 +1,11 @@
+{
+  "as_of": "2026-09-20",
+  "broker": "Charles Schwab",
+  "scope": "Standard online US listed options; actual account fees override estimates",
+  "base_fee_u": 0,
+  "per_contract_fee_u": 650000,
+  "btc_waiver_threshold_u": 50000,
+  "source": "https://www.schwab.com/legal/schwab-pricing-guide-for-individual-investors",
+  "waiver_source": "https://www.schwab.com/node/18136",
+  "note": "Exchange and other charges are not assumed zero. Rates may change."
+}
