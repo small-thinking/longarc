@@ -10,6 +10,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Calculation and audit dry run
+
+- PR #12 and #13 are merged; new calculation work branches from main `6b446fd`. Added pure quote/time/moneyness/history metrics and explicit close/coverage/roll scenarios, with one JSON CLI operation to load, calculate and append an audit event.
+- Every run preserves resolved inputs, IDs/hash, timestamps, source/quality, code fingerprint, metrics and missing/error reasons. Repeated requests are idempotent; current positions are never inferred from opening lots. Schema remains v2; optional underlying timestamp lives in snapshot JSON without changing existing retry hashes.
+- Validation: 74 tests, lint and type checks pass. Isolated CLI dry run covered multiple opening lots, repeated snapshots, exact-ID history, synthetic arithmetic, idempotent retry, readback hashes and backup. The authorized existing Schwab tab supplied one quote-only dry run; absent quote/Greek times and multiplier remain unknown. No actual holdings imported; the main database's three business tables remain empty.
+- Reviewed the old calculator's formulas; kept the explicit micro-unit input contract and unknown-value behavior. Strategy thresholds unchanged. Next: source freshness/units and policy contract, then manual fill reconciliation. No automatic observation schedule or trading readiness is claimed.
+- This increment is prepared as a new PR, not merged.
+
 ### 2026-09-20 — Multiple opening lots and quote history
 
 - Added migration 2: holding_lots and holding_snapshots, linking repeated checks to distinct short-call opening lots, including same-contract openings. Added narrow JSON CLI read/write tools.
@@ -52,6 +60,4 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Verification
 
-Latest implementation evidence: PR #11, 34 passing tests plus lint, type and governance checks, with local write/read/retry/backup/restore validation. PR #10's 17-test result is historical and does not describe the current CLI.
-
-This work-note update changes documentation and project guidance only; governance and diff checks apply, with no application or schema change.
+Latest implementation evidence: 74 passing tests, lint/types/governance, and isolated synthetic plus browser-quote calculation/readback/retry/backup checks. Browser data are unverified and incomplete; this validates the engineering loop, not a trading strategy. Earlier entries retain historical test counts.
