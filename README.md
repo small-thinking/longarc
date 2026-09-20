@@ -24,6 +24,8 @@ These utilities are candidates for reuse, not a validated options data pipeline.
 
 ## Development
 
+Keep PRs small and focused, with concise code that is easy for a human to review. Database changes must include their schema and migration impact in the PR.
+
 Python 3.11+ and `uv`:
 
 ```bash

@@ -8,6 +8,11 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Review conventions
+
+- Recorded minimal, readable PR scope in the project development skill and README. Added schema disclosure to the PR template and exact migration-1 SQL to PR #11. Documentation only; no application or database changes.
+
+
 ### 2026-09-20 — SQLite foundation
 
 - Merged cleanup PR #10, then implemented W02's first storage slice on a new branch.
