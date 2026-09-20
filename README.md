@@ -75,3 +75,18 @@ History retains closed-session observations for audit but excludes intervals wit
 an explicitly verified closed-session endpoint from change statistics. Reports can be
 requested ad hoc with `options history`; this does not enable scheduling, trade
 replay, loss-probability estimation or expected monthly-income modeling.
+
+### Shared-policy replay and updating estimates
+
+`options replay` reads saved canonical quote evidence and runs the same policy as
+`options decide`. It models explicit bid/ask fills, costs, risk/profit closes and
+roll obligations without writing actual trades. `options estimate` reads the latest
+episode revisions, reports partial/open samples separately, updates descriptive
+net-P&L/loss statistics and supports paired policy comparisons. One completed cycle
+is usable; uncertainty is reported as unknown when it cannot be estimated.
+
+[Replay inputs and commands](docs/calculations.md#policy-replay-and-adaptive-descriptive-estimates)
+explain required source checks and execution assumptions. Monthly scaling is an
+explicit scenario, not an empirical income forecast; missing paths and assignment
+cannot be reconstructed. All reports remain ad hoc, with no automatic trading or
+policy changes.

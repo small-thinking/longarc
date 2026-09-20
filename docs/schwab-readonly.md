@@ -136,3 +136,22 @@ closed-session reads remain audit points but do not produce price/delta change
 intervals, including comparisons against older untagged records. Missing active-session paths cannot be recovered by
 format conversion. The history report describes observations; it does not simulate
 entry, buy-to-close, roll costs, assignment or monthly expected income.
+
+
+## Continue a research episode
+
+On each user-requested review, read `options estimate`'s `watch_contracts` and include
+those existing simulated obligations in the requested capture coverage, alongside
+current entry candidates. Follow the established two-/four-week candidate-selection
+procedure; fix each candidate before observing its later outcomes. Save canonical
+captures first, then append their IDs and contemporaneous source checks to the
+existing replay request. `options replay` reruns the shared policy and preserves
+revision history; `options estimate` produces the updated ad-hoc report. See the
+[replay contract](calculations.md#policy-replay-and-adaptive-descriptive-estimates).
+
+Never set source checks to true merely to obtain a number. If quote/Greek times,
+dividend window, market state or a pending contract's price cannot be established,
+record the missing evidence and keep the cycle incomplete. The first valid future
+entry is a new episode, not a retroactive fill against old closed-market quotes.
+Research size, fee/slippage and sampling tolerances are explicit assumptions,
+separate from live-policy approval. No scheduled collection is enabled by this flow.
