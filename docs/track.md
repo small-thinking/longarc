@@ -15,7 +15,7 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - PR #19 merged; this increment reuses the existing advisory policy for observed-checkpoint shadow episodes, with bid/ask/slippage fills, fee-aware closes and separately accounted roll legs. No independent set of trading thresholds or actual executions.
 - Added newest-revision reports, incomplete/open counts, entry-date cohort statistics, explicit monthly scenario scaling and matched two-policy comparisons. One complete cycle contributes; missing outcomes are not zero-filled. Code/policy/assumptions/source modes stay separate.
 - No database schema changes: only append-only shadow calculation records and local reports. No scheduling or automatic policy tuning. Candidate choice/calendar/freshness attestations still require evidence; this is not a continuous-market or calendar-month portfolio backtest.
-- Validation: 191 passing tests covering policy reuse, loss/profit/roll accounting, slippage, source gates, incomplete paths, immutable revisions, CLI/report and statistical edge cases; lint/types/governance pass. Local actual-data report correctly has no completed replay cycles. PR pending; not merged.
+- Validation: 191 passing tests covering policy reuse, loss/profit/roll accounting, slippage, source gates, incomplete paths, immutable revisions, CLI/report and statistical edge cases; lint/types/governance pass. Local actual-data report correctly has no completed replay cycles. PR [#20](https://github.com/small-thinking/longarc/pull/20) open; not merged.
 
 
 ### 2026-09-20 — Unified selected-row observation ingestion
