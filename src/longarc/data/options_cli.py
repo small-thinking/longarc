@@ -88,7 +88,8 @@ def add_parser(subparsers: Any) -> None:
         command = commands.add_parser(name)
         command.add_argument("--db", required=True, help="Existing local observation database")
         if name in ("costs", "decide", "execution-add", "replay"):
-            command.add_argument("--file", required=True, help="Structured calculation, execution or replay request JSON")
+            command.add_argument("--file", required=True,
+                                 help="Structured calculation, execution or replay request JSON")
         if name in ("ingest", "history"):
             command.add_argument("--mode", choices=("observe", "shadow"),
                                  default="observe" if name == "history" else None)
