@@ -10,6 +10,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Closed-session idempotency
+
+- PR #16 merged and local main synchronized to `3d94447`.
+- Added explicit verified-closed-session ingestion: identical content with new collection times returns the original snapshot; changed data/coverage and active-session samples remain separate. Original evidence/time are preserved. General journal conflict protection is unchanged.
+- No schema changes or migration. No deletion of historical data and no automatic schedule.
+- Validation: repeat-read, changed-price, session/mode isolation and invalid-date regression tests; full quality checks. Follow-up PR pending.
+
+
 ### 2026-09-20 — Candidate collection, sparse history and costs
 
 - Added a bounded read-only Schwab browser bridge, partial capture ingestion, exact-contract histories and pooled DTE/Delta/interval descriptive statistics. Missing sessions/fields remain explicit; no interpolated prices or intraday crossing claims.

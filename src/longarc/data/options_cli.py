@@ -21,7 +21,8 @@ def run(args: argparse.Namespace) -> int:
     try:
         path = Path(args.db)
         if args.options_command == "ingest":
-            result = ingest_capture(path, _json(args.file), mode=args.mode)
+            result = ingest_capture(path, _json(args.file), mode=args.mode,
+                                    closed_session=args.closed_session)
         elif args.options_command == "costs":
             result = estimate_and_log(path, _json(args.file), _json(args.fees))
         else:
@@ -59,6 +60,8 @@ def add_parser(subparsers: Any) -> None:
             command.add_argument("--file", required=True, help="Capture or cost-request JSON")
         if name in ("ingest", "history"):
             command.add_argument("--mode", choices=("observe", "shadow"), default="observe")
+        if name == "ingest":
+            command.add_argument("--closed-session", help="Verified last closed market date")
         if name == "costs":
             command.add_argument("--fees", required=True, help="Dated fee schedule JSON")
         if name == "history":

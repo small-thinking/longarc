@@ -104,3 +104,46 @@ def test_naive_time_rejected_without_fabricated_capture_time() -> None:
     raw["captured_at"] = "2026-09-21T12:00:00"
     with pytest.raises(ValueError):
         normalize_capture(raw)
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_repeated_reads_only_deduplicate_with_explicit_closed_session(tmp_path, closed):
+    db = tmp_path / "dedup.sqlite3"
+    store.initialize(db)
+    raw = capture()
+    kwargs = {"closed_session": "2026-09-18"} if closed else {}
+    first = ingest_capture(db, raw, **kwargs)
+    raw["captured_at"] = "2026-09-22T20:00:00Z"
+    raw["slices"][0]["captured_at"] = raw["captured_at"]
+    second = ingest_capture(db, raw, **kwargs)
+    assert (first["record_id"] == second["record_id"]) is closed
+    assert second["stored_captured_at"] == (
+        first["stored_captured_at"] if closed else "2026-09-22T20:00:00.000000Z")
+    raw["slices"][0]["rows"][0][2] = "1.03"
+    third = ingest_capture(db, raw, **kwargs)
+    assert third["record_id"] != second["record_id"]
+
+
+def test_closed_session_separates_market_dates_and_modes(tmp_path):
+    db = tmp_path / "dates.sqlite3"
+    store.initialize(db)
+    a = ingest_capture(db, capture(), closed_session="2026-09-18")
+    b = ingest_capture(db, capture(), closed_session="2026-09-21")
+    c = ingest_capture(db, capture(), closed_session="2026-09-21", mode="shadow")
+    assert len({a["record_id"], b["record_id"], c["record_id"]}) == 3
+    with pytest.raises(ValueError, match="future"):
+        ingest_capture(db, capture(), closed_session="2026-09-22")
+
+
+def test_concurrent_closed_reads_share_one_record(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    db = tmp_path / "concurrent.sqlite3"
+    store.initialize(db)
+    captures = [capture(), capture()]
+    captures[1]["captured_at"] = "2026-09-21T20:00:00Z"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            lambda raw: ingest_capture(db, raw, closed_session="2026-09-18"), captures))
+    assert results[0]["record_id"] == results[1]["record_id"]
+    assert len(store.list_observations(db, "options:QQQ")) == 1
