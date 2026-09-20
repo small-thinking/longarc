@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from longarc import __version__
-from longarc.storage import store
+from longarc.storage import holdings, store
 
 
 def run(args: argparse.Namespace) -> int:
@@ -28,7 +28,25 @@ def run(args: argparse.Namespace) -> int:
         path = Path(args.db)
         action = args.db_command
         result: Any
-        if action == "init":
+        if action in ("holding-add", "snapshot-add"):
+            payload = json.loads(Path(args.file).read_text())
+            if not isinstance(payload, dict):
+                raise ValueError("Input must be a JSON object")
+            function = holdings.add_holding if action == "holding-add" else holdings.add_snapshot
+            result = function(path, payload)
+            envelope["as_of"] = holdings.timestamp(
+                payload["opened_at" if action == "holding-add" else "captured_at"]
+            )
+            envelope["source"] = payload["source"]
+            envelope["quality"] = "provisional" if action == "holding-add" else payload["quality"]
+            envelope["warnings"].append(
+                "Opening lots do not establish current reconciled positions"
+            )
+        elif action == "holdings":
+            result = holdings.list_holdings(path, args.account, args.mode)
+        elif action == "history":
+            result = holdings.history(path, args.id, args.limit)
+        elif action == "init":
             result = store.initialize(path)
         elif action == "health":
             result = store.health(path)
@@ -73,14 +91,32 @@ def run(args: argparse.Namespace) -> int:
 def add_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser("db", help="Local observation journal and recovery tools")
     commands = parser.add_subparsers(dest="db_command", required=True)
-    for command in ("init", "health", "save", "get", "list", "backup", "restore"):
+    for command in (
+        "init",
+        "health",
+        "save",
+        "get",
+        "list",
+        "backup",
+        "restore",
+        "holding-add",
+        "snapshot-add",
+        "holdings",
+        "history",
+    ):
         child = commands.add_parser(command)
         child.add_argument(
             "--db", required=True, help="Explicit database path (source for restore)"
         )
         child.set_defaults(handler=run)
-        if command == "save":
+        if command in ("save", "holding-add", "snapshot-add"):
             child.add_argument("--file", required=True, help="Validated observation JSON file")
+        elif command == "holdings":
+            child.add_argument("--account", required=True)
+            child.add_argument("--mode", required=True, choices=("manual", "shadow"))
+        elif command == "history":
+            child.add_argument("--id", required=True)
+            child.add_argument("--limit", type=int, default=100)
         elif command == "get":
             child.add_argument("--id", required=True)
         elif command == "list":

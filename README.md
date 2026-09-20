@@ -10,6 +10,10 @@ SQLite storage foundation is implemented: initialization, observation writes/rea
 
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
 
+## Holding tracking
+
+Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). Supplied openings remain provisional; current quantities, exits/rolls and strategy calculations are not implemented.
+
 ## Storage tools
 
 Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal, not a trading ledger or approval system. No database server needs starting.
