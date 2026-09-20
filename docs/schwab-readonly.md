@@ -2,6 +2,8 @@
 
 Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. This runbook is a manual browser-assisted workflow, not a deployed collector, scheduler or approved numerical strategy.
 
+The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
+
 ## Before reading
 
 1. Confirm the current checkout exposes the required CLI. The calculation implementation is PR #14; its merge/checkout state must be checked, not assumed from this document. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
