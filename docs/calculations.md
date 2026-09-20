@@ -84,3 +84,117 @@ Initially use the explicitly versioned rules, current verified facts and clearly
 As data grow, compare like-for-like DTE/Delta regimes and strategy versions, showing numbers of completed episodes, calendar coverage and missingness. Later empirical calibration needs held-out or walk-forward checks and transaction costs; correlated quotes are not independent trials. Choosing a threshold on the same trades used to advertise its performance overstates evidence. Record any policy change prospectively.
 
 Realized option P&L alone cannot measure strategy risk or value over buy-and-hold. That needs contemporaneous marks for all open options and stock, dividends, cash flows and a matching QQQ benchmark. Open losses, sacrificed upside and assignment effects must be included before claiming portfolio drawdown, return, Sharpe ratio or strategy superiority. This increment does not implement that portfolio valuation or empirical policy optimization.
+
+## Policy replay and adaptive descriptive estimates
+
+The replay uses `decisions.evaluate`, the same entry/exit/roll policy function as
+`options decide`. It does not maintain another set of trading thresholds. Candidate
+selection remains explicit: fix the contract at the first observation, using the
+existing candidate-selection procedure. Do not choose a better entry retrospectively.
+A research tenor comparison changes only a copy of the policy's entry DTE range;
+never rewrite the live policy. Use the same episode ID for a paired start, distinct
+policy hashes for the two variants, and identical execution assumptions. Pairing
+requires the same New York entry date; elapsed holding periods can differ, so cycle
+P&L comparisons alone do not establish which tenor earns more per calendar month.
+
+```bash
+uv run python -m longarc.cli options replay --db private/longarc.sqlite3 \
+  --file private/replay-request.json --policy private/policy.json --fees private/fees.json
+uv run python -m longarc.cli options estimate --db private/longarc.sqlite3 \
+  --json-output private/estimates.json --markdown-output private/estimates.md
+```
+
+Replay request contract (all numbers here are synthetic interface examples):
+
+```json
+{
+  "episode_id": "study-start-001",
+  "as_of": "2026-09-23T20:00:00Z",
+  "contract": {"expiry_date": "2026-10-16", "strike_u": 110000000},
+  "assumptions": {
+    "contracts": 1, "multiplier": 100, "covered_shares": 100,
+    "opening_slippage_u": 10000, "closing_slippage_u": 20000,
+    "opening_extra_fees_u": 0, "closing_extra_fees_u": 0,
+    "max_quote_age_seconds": 60, "max_greeks_age_seconds": 60,
+    "max_underlying_age_seconds": 60, "max_gap_hours": 72,
+    "allow_roll": false
+  },
+  "observations": [
+    {"record_id": "CANONICAL_CHAIN_ID_AT_ENTRY", "checks": {
+      "market_open": true, "quote_usable": true, "greeks_usable": true,
+      "underlying_usable": true, "dividend_window_clear": true,
+      "standard_contract": true, "reentry_cooldown_clear": true
+    }},
+    {"record_id": "CANONICAL_CHAIN_ID_AT_NEXT_CHECK", "checks": {
+      "market_open": true, "quote_usable": true, "greeks_usable": true,
+      "underlying_usable": true, "dividend_window_clear": true,
+      "standard_contract": true, "reentry_cooldown_clear": true
+    }}
+  ]
+}
+```
+
+`--fees` uses the existing cost schedule: dated `as_of`, `base_fee_u`,
+`per_contract_fee_u`, and `btc_waiver_threshold_u`. Extra fees and slippage are
+explicit research assumptions, including an explicit zero; these are not approvals
+of live execution settings. Values ending `_u` are integer millionths of dollars.
+Contract multiplier and covered shares are simulated sizing, never inferred holdings.
+A different assumed size/cost/freshness/roll configuration forms a separate group.
+
+Each frame references a saved canonical chain batch; the engine loads prices,
+Greeks, spot and source times from that record. Flags alone cannot make missing,
+future or stale source timestamps usable. Flags for market state, contract type,
+calendar/dividend window and cooldown still require contemporaneous evidence from
+the read-only review. Closed-session records cannot create simulated fills. Missing
+entry facts stop that attempt; the engine does not search forward for a favorable
+entry. At later checkpoints, known policy risk signals still take priority even
+when unrelated fields are missing.
+
+A frame may include `replacement` with `expiry_date` and `strike_u`, plus
+`replacement_checks` in the same shape as `checks`. It is used only when
+`allow_roll=true`. New-leg prices must be present in that frame's source batch.
+The existing policy must permit the roll, and net credit must remain nonnegative
+after the assumed slippage and both legs' fees. Entry fills use bid minus opening
+slippage; BTC uses ask plus closing slippage. A profit fill additionally requires
+positive modeled net after slippage; a risk exit is not blocked because it loses
+money. Each closed leg charges its own opening and closing fees once. A roll's
+new premium leaves an open obligation: it is not immediately realized income.
+
+Append observations chronologically to the same request and rerun. An episode's
+original entry and observation prefix cannot be rewritten; corrections/alternative
+entries need a distinct, clearly labeled episode ID. Replay logs are shadow/synthetic,
+linked to quote evidence, and versioned by policy, execution assumptions, source
+mode and replay code. No actual execution journal or holdings are modified.
+Repeated identical requests return the same record. `estimate` selects only the
+newest revision of each episode/policy/assumption group and fails on a query limit
+rather than silently truncating. Its `watch_contracts` output lists outstanding
+simulated obligations to include in the next authorized read.
+
+With one completed eligible cycle, estimates report its mean and observed loss
+fraction; standard error remains unknown. More completed cycles update the report
+without any hard minimum sample threshold. Same-entry-date episodes share a cohort;
+cohort counts are not statistically independent effective sample sizes. Descriptive
+standard errors require at least two dates. Wilson intervals describe the fraction
+of negative **cohort means**, not individual-trade or monthly loss probability.
+All-win samples retain a positive upper loss bound. Overlapping dates, changing
+markets, missed paths and selection bias limit interpretation.
+
+Open/no-entry/incomplete episodes are counted separately, never zero-filled into
+closed-cycle returns. Oversized collection gaps, unresolved exits and missing
+critical evaluations make a cycle incomplete; any observed-endpoint P&L remains a
+diagnostic. Even an eligible replay describes only the observed-checkpoint strategy,
+not continuous monitoring, the true first intraday threshold crossing or assignment.
+Maximum gap is a declared research sampling assumption, not proof of path completeness.
+
+Optional `--cycles-per-month NUMBER` scales the equal-weight cohort mean as an
+explicit sequential-cycle/constant-size scenario. It is not an empirical monthly
+income forecast: idle time, reentry, unequal durations and open obligations prevent
+mechanical annualization. Without completed cycles, it remains unknown. Existing
+`options costs` supports quote-based what-if arithmetic before paths exist. The
+engine does not manufacture outcome probabilities from OTM or delta.
+
+For a paired report, add `--left-policy HASH --right-policy HASH` to `estimate`.
+It compares only same-episode, same-assumption, same-entry-date closed pairs and
+reports unmatched/incomplete counts. There is no automated threshold tuning,
+unattended collection, report schedule, broker execution, automatic candidate
+ranking or calendar-month portfolio backtest. Reports are generated on demand.
