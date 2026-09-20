@@ -39,6 +39,8 @@ CREATE TRIGGER observations_no_delete BEFORE DELETE ON observations
 BEGIN SELECT RAISE(ABORT, 'observations are append-only'); END;
 """
 CHECKSUM = hashlib.sha256(SCHEMA.encode()).hexdigest()
+MIGRATIONS = (SCHEMA, Path(__file__).with_name("schema_v2.sql").read_text())
+CHECKSUMS = [hashlib.sha256(sql.encode()).hexdigest() for sql in MIGRATIONS]
 
 
 def utc_now() -> str:
@@ -72,23 +74,35 @@ def connect(
         db.close()
 
 
-def check_schema(db: sqlite3.Connection) -> None:
+def check_schema(db: sqlite3.Connection, *, allow_old: bool = False) -> int:
     rows = db.execute("SELECT version, checksum FROM schema_migrations ORDER BY version").fetchall()
-    if [(r[0], r[1]) for r in rows] != [(1, CHECKSUM)]:
-        raise ValueError("Unsupported or modified schema migration; refusing access")
+    versions = [(r[0], r[1]) for r in rows]
+    expected = list(enumerate(CHECKSUMS, start=1))
+    if (
+        not versions
+        or versions != expected[: len(versions)]
+        or (not allow_old and len(versions) != len(expected))
+    ):
+        raise ValueError(
+            "Unsupported or modified schema migration; run db init for a known old version"
+        )
+    return len(versions)
 
 
 def initialize(path: Path) -> dict[str, Any]:
     if sqlite3.sqlite_version_info < (3, 37, 0):
         raise ValueError("SQLite >= 3.37 required")
     with connect(path, create=True) as db:
+        version = 0
         if db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchone():
-            check_schema(db)
-        else:
-            # Explicit transaction includes the entire migration and its receipt.
+            version = check_schema(db, allow_old=True)
+        for index in range(version, len(MIGRATIONS)):
             try:
-                db.executescript("BEGIN IMMEDIATE;\n" + SCHEMA)
-                db.execute("INSERT INTO schema_migrations VALUES (1, ?, ?)", (CHECKSUM, utc_now()))
+                db.executescript("BEGIN IMMEDIATE;\n" + MIGRATIONS[index])
+                db.execute(
+                    "INSERT INTO schema_migrations VALUES (?, ?, ?)",
+                    (index + 1, CHECKSUMS[index], utc_now()),
+                )
                 db.commit()
             except Exception:
                 db.rollback()
@@ -99,7 +113,7 @@ def initialize(path: Path) -> dict[str, Any]:
 
 def health(path: Path) -> dict[str, Any]:
     with connect(path, readonly=True) as db:
-        check_schema(db)
+        version = check_schema(db, allow_old=True)
         integrity = [r[0] for r in db.execute("PRAGMA integrity_check")]
         fk = list(db.execute("PRAGMA foreign_key_check"))
         if integrity != ["ok"] or fk:
@@ -107,7 +121,7 @@ def health(path: Path) -> dict[str, Any]:
         return {
             "status": "ok",
             "database": str(path.resolve()),
-            "schema_version": 1,
+            "schema_version": version,
             "sqlite_version": sqlite3.sqlite_version,
             "integrity": "ok",
             "journal_mode": db.execute("PRAGMA journal_mode").fetchone()[0],

@@ -8,7 +8,7 @@ The earlier SMA/momentum, multi-strategy, multi-asset, and automated-execution r
 
 ## Next work
 
-SQLite is selected and the observation-journal foundation is implemented; see [storage operations](storage.md). Next implement the minimum episode-to-observation relationship and parameter contract, then add a focused calculation using fixtures before connecting authorized live data. Any application-service lifecycle is distinct from database-file recovery.
+SQLite is selected and the observation-journal foundation is implemented; see [storage operations](storage.md). Opening-lot and repeated-snapshot storage is implemented as a narrow initial relationship; see [holding tracking](holding-tracking.md). Full episode/roll reconciliation remains pending. Next add one pure midpoint/spread calculation and its logging adapter before connecting authorized live data. Any application-service lifecycle is distinct from database-file recovery.
 
 Continue using the work packages and acceptance criteria in the local consolidated plan. Full domain storage, options collection, covered-call analysis, execution records, alerts, and the complete workflow remain unimplemented. The remaining data utilities do not satisfy those requirements. Legacy trading configuration and placeholder commands have been removed; the new policy and persistence contracts will be implemented from the current plan.
 

@@ -10,6 +10,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Multiple opening lots and quote history
+
+- Added migration 2: holding_lots and holding_snapshots, linking repeated checks to distinct short-call opening lots, including same-contract openings. Added narrow JSON CLI read/write tools.
+- Mapped the supplied option-chain fields and missing evidence; no screenshot data or actual account holdings imported. Opening records remain provisional and do not establish current remaining positions.
+- Calculations and strategy thresholds unchanged. Next: one pure midpoint/spread function and a thin read/calculate/record adapter; execution lifecycle and complete coverage remain later work.
+- Validation: 49 tests passed; lint/types/governance passed. Local database backed up and migrated from v1 to v2; all business tables remain empty. Tests cover migration/data preservation, multi-lot isolation, repeated snapshots/idempotency, input validation, CLI and backup/restore. This implementation PR depends on the separate work-note PR #12; neither is represented as merged here.
+
+
 ### 2026-09-20 — Storage merged; clarify transaction tracking
 
 - PR #10 (legacy cleanup) and PR #11 (SQLite foundation) are merged. Local main synchronized to `0d5daec` after #11.
