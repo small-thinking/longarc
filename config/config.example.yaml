@@ -13,10 +13,9 @@ broker:
   adapter: "paper_sim"
 
 strategy:
-  name: "sma_cross"
-  params:
-    fast_window: 20
-    slow_window: 100
+  # Scaffold only; no investment strategy or policy is selected.
+  name: null
+  params: {}
 
 portfolio:
   base_currency: "USD"

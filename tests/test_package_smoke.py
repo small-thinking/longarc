@@ -28,3 +28,11 @@ def test_example_config_loads() -> None:
     config = load_config(Path("config/config.example.yaml"))
     assert isinstance(config, AppConfig)
     assert config.universe.symbols == ["AAPL"]
+
+
+def test_scaffold_does_not_select_an_investment_strategy() -> None:
+    default_config = AppConfig()
+    example_config = load_config(Path("config/config.example.yaml"))
+    for config in (default_config, example_config):
+        assert config.strategy.name is None
+        assert config.strategy.params == {}

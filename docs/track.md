@@ -4,14 +4,20 @@
 
 Track milestone progress, quality controls, and verification history.
 
-## Milestone Status
+## Current work
 
-| Milestone | Status | Notes |
-| --- | --- | --- |
-| M0 | Completed | Python package scaffold, config/logging modules, CLI skeleton, and baseline tests added. |
-| M1 | In progress | `uv`-based quality workflow and governance checks added; data layer implementation pending. |
+Only the migrated QQQ plan is active. Its canonical work packages are maintained locally in `private/qqq-covered-call-plan/PLAN.md`. Implementation has not started; persistence selection and setup are next. The previous M0/M1 labels below describe historical scaffold work, not progress against the QQQ plan.
 
 ## Change Log
+
+### 2026-09-20 — Focus the investment workspace
+
+- Retired the earlier generic trading roadmap and redirected current documentation to the local QQQ plan.
+- Reduced local investment materials to five active files; historical originals and migration context were verified and archived outside this repository.
+- Removed the SMA default and crossover parameters from scaffold configuration. An unset strategy remains unset when loading defaults or the example.
+- Preserved reusable data/configuration/CLI infrastructure; no database or investment engine was implemented.
+- Validation: configuration regression coverage, existing test suite, lint, type checks, and governance checks.
+
 
 ### 2026-02-09
 

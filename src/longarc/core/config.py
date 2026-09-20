@@ -24,7 +24,7 @@ class BrokerConfig(BaseModel):
 
 
 class StrategyConfig(BaseModel):
-    name: str = "sma_cross"
+    name: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -1,25 +1,13 @@
 # LongArc
-Low-frequency, audit-first trading system evolving toward agentic workflows.
+Local investment tooling focused on the QQQ covered-call plan.
 
-## Status (as of 2026-02-09)
+## Current focus
 
-Current stage: M0 scaffold complete, M1 not implemented yet.
+Only the migrated QQQ covered-call strategy and its iteration plan are active. Start with `private/qqq-covered-call-plan/README.md` in this local investment workspace; those personal materials are excluded from Git. See [current scope](docs/plan.md) and [progress](docs/track.md).
 
-- Python package `longarc` with install/run via `uv`.
-- Config schema + YAML loading (`src/longarc/core/config.py`).
-- Structured logging bootstrap (`src/longarc/core/logging.py`).
-- CLI surface (`src/longarc/cli.py`): `data download`, `data show-latest`, `backtest`, `paper-sim run`, `paper run`, `report`.
-- CI quality gate (governance + lint + type check + tests) in GitHub Actions.
-- Contributor workflow now enforces product-facing status updates in both README and tracking after every change.
+The previous generic trading roadmap has been retired. The next requested step is database selection, controlled read/write access, and recovery. That work has not been implemented.
 
-Not implemented yet:
-- Real market data download/storage logic.
-- Backtest engine.
-- Paper simulation engine.
-- Live paper broker adapters.
-- Report generation logic.
-
-All CLI business commands currently log "not implemented yet" and exit successfully.
+Reusable foundations: Python package and CLI, configuration loading, logging, local Parquet storage, synthetic development bars, and a Polygon OHLCV adapter. These are candidates for reuse, not a working QQQ options system. Backtest, paper, and report commands remain legacy placeholders. The example configuration is a scaffold fixture, not an approved investment policy; no strategy is selected by default.
 
 ## Quick Start
 
