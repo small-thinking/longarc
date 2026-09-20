@@ -34,7 +34,7 @@ Read source freshness/delay notices and market-session state. Do not label weeke
 
 Start contract selection with per-unit quotes, delta, liquidity and expiry comparisons; do not require a preset contract count for this analysis. Actual coverage, total cash requirements and position exposure still require observed quantities. Use recorded snapshot changes with explicit observation intervals; disclose missing history rather than inferring a trend.
 
-Use the existing CLI/functions for money and scenario arithmetic. Use explicit quantities and total fees, preserving missing inputs. Compare candidates under labeled assumptions when numerical preferences remain unresolved; this is not a policy pass. Include the no-action alternative. Confirm live state again before presenting a time-sensitive conclusion if collection was interrupted or took long enough to make inputs questionable.
+Use the existing CLI/functions for money and scenario arithmetic. Use explicit quantities and total fees, preserving missing inputs. Apply the current offline rules from the private context/policy consistently; never loosen an exit threshold during a run to accommodate a losing position. Compare candidates under labeled assumptions only for unresolved parameters; this is not a policy pass. Persist the policy version with each analysis. Include the no-action alternative. Confirm live state again before presenting a time-sensitive conclusion if collection was interrupted or took long enough to make inputs questionable.
 
 For the future dry run, the existing `db save` observation envelope can retain the following in `inputs`/`results`; these are payload conventions, not new tables or a new implemented API:
 
