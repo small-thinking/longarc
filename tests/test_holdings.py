@@ -175,3 +175,13 @@ def test_cli_holding_and_history(db: Path, tmp_path: Path, capsys) -> None:  # t
     h = json.loads(capsys.readouterr().out)["result"]["holding_id"]
     assert main(["db", "history", "--db", str(db), "--id", h]) == 0
     assert json.loads(capsys.readouterr().out)["result"]["position_status"] == "not_reconciled"
+
+
+def test_optional_underlying_time_preserves_legacy_payload_hash(db: Path) -> None:
+    h = holdings.add_holding(db, lot())["holding_id"]
+    first = holdings.add_snapshot(db, quote(h))
+    stored = holdings.history(db, h)["snapshots"][0]
+    assert "underlying_at" not in stored
+    assert holdings.add_snapshot(db, quote(h))["snapshot_id"] == first["snapshot_id"]
+    with pytest.raises(ValueError, match="timezone"):
+        holdings.add_snapshot(db, quote(h, idempotency_key="new", underlying_at="2026-09-20"))

@@ -20,7 +20,7 @@ def test_cli_has_expected_top_level_commands() -> None:
         action for action in parser._actions if action.dest == "command"  # noqa: SLF001
     )
     command_names = set(subparsers_action.choices.keys())
-    assert command_names == {"data", "db"}
+    assert command_names == {"data", "db", "calc"}
 
 
 @pytest.mark.parametrize("command", ["backtest", "paper-sim", "paper", "report"])
