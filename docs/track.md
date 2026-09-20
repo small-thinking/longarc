@@ -4,9 +4,23 @@
 
 Rebuild around the migrated QQQ plan. The canonical work packages are in the local `private/qqq-covered-call-plan/PLAN.md`; private policy values are not duplicated here.
 
-Database selection/setup and the QQQ application remain pending. Existing OHLCV utilities are reuse candidates, not completed QQQ work packages. Earlier generic trading milestones are retired; their development history is preserved in Git.
+SQLite was selected and the local observation storage slice is implemented. The complete QQQ application remains pending. Existing OHLCV utilities are reuse candidates, not completed QQQ work packages. Earlier generic trading milestones are retired; their development history is preserved in Git.
 
 ## Change Log
+
+### 2026-09-20 — Review conventions
+
+- Recorded minimal, readable PR scope in the project development skill and README. Added schema disclosure to the PR template and exact migration-1 SQL to PR #11. Documentation only; no application or database changes.
+
+
+### 2026-09-20 — SQLite foundation
+
+- Merged cleanup PR #10, then implemented W02's first storage slice on a new branch.
+- Added transactional schema initialization, append-only observations, explicit provenance and idempotency, bounded reads, health checks and consistent backup/restore to new paths.
+- Added structured `db` CLI tools for Codex; no SQL write escape hatch or trading execution.
+- Full policy, money/contract domain validation, financial calculation, ingestion, fills, replay, scheduling and alerts remain pending; W00/W02 are not wholly complete.
+- Verification: 34 tests passed, plus lint, type checks and governance. Local SQLite 3.47.1 database initialized empty; separate synthetic database verified write/read, retry, backup and restore with identical readback. Evidence stays in private deployment files.
+
 
 ### 2026-09-20 — Clear the old trading framework
 

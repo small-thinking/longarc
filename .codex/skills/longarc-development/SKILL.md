@@ -10,7 +10,8 @@ Use this skill for any code, CI, or documentation change in this repository.
 ## Non-Negotiables
 
 1. Always add corresponding test for behavior changes.
-2. Keep changes milestone-scoped and minimal.
+2. Keep each PR to the smallest coherent, reviewable change. Prefer concise, readable code; remove redundancy and avoid speculative abstractions or unrelated refactors. Split independent work to reduce human review effort.
+   For database changes, list added/changed/dropped tables and the exact schema delta (columns, types, nullability, keys, constraints and indexes) in the PR, plus migration/data-compatibility impact. State explicitly when there is no schema change.
 3. Update both `README.md` and `docs/track.md` after every repo change.
 4. Write doc updates from product perspective: capability/status, user impact, and current limits.
 5. Default git flow: sync `main`, branch from updated `main`, then implement.

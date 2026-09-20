@@ -8,6 +8,6 @@ The earlier SMA/momentum, multi-strategy, multi-asset, and automated-execution r
 
 ## Next work
 
-Audit the existing reusable data/logging/CLI foundation, then select and establish persistence with controlled insert/read interfaces and backup/recovery. SQLite is a design candidate, not a deployed database. Any application-service lifecycle is distinct from database-file recovery.
+SQLite is selected and the observation-journal foundation is implemented; see [storage operations](storage.md). Next expand the audited domain and policy contracts, then build calculation methods against fixtures before connecting authorized live data. Any application-service lifecycle is distinct from database-file recovery.
 
-Continue using the work packages and acceptance criteria in the local consolidated plan. Database construction, options collection, covered-call analysis, execution records, alerts, and the complete workflow remain unimplemented. The remaining data utilities do not satisfy those requirements. Legacy trading configuration and placeholder commands have been removed; the new policy and persistence contracts will be implemented from the current plan.
+Continue using the work packages and acceptance criteria in the local consolidated plan. Full domain storage, options collection, covered-call analysis, execution records, alerts, and the complete workflow remain unimplemented. The remaining data utilities do not satisfy those requirements. Legacy trading configuration and placeholder commands have been removed; the new policy and persistence contracts will be implemented from the current plan.

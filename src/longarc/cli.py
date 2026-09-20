@@ -10,6 +10,7 @@ from typing import Any, Callable, cast
 from longarc.core.logging import configure_logging
 from longarc.data.providers.registry import get_provider
 from longarc.data.store import read_bars
+from longarc.storage.cli import add_parser
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ def build_parser() -> argparse.ArgumentParser:
     data_latest.add_argument("--data-path", default="./data", help="Base path for local data")
     data_latest.set_defaults(handler=_data_show_latest)
 
+    add_parser(subparsers)
     return parser
 
 

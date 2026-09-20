@@ -1,0 +1,14 @@
+{
+  "idempotency_key": "setup-smoke-20260920-v1",
+  "scope": "setup-smoke",
+  "mode": "shadow",
+  "kind": "no_action",
+  "observed_at": "2026-09-20T08:00:00Z",
+  "source": "synthetic_fixture",
+  "quality": "synthetic",
+  "code_version": "storage-foundation-v1-fixture",
+  "inputs": {"symbol": "QQQ", "bid_u": null, "ask_u": null},
+  "results": {"reason": "deployment_smoke_test_not_market_data"},
+  "evidence_ids": [],
+  "policy_hash": null
+}

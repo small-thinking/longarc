@@ -6,9 +6,13 @@ Local investment tooling being rebuilt around the QQQ covered-call plan.
 
 The only active product plan is the migrated QQQ strategy: infrequent manual trades, frequent observation and deterministic calculations, and complete records. Start with `private/qqq-covered-call-plan/README.md` in the local investment workspace. The five personal planning files are excluded from Git and are not included in a fresh clone.
 
-Next: audit the reusable foundation, select and establish the database, and add controlled read/write and recovery. The database, option-chain collection, analysis, trade records, alerts and complete workflow are **not implemented**.
+SQLite storage foundation is implemented: initialization, observation writes/reads, health checks and backup/restore through a JSON CLI. See [storage operations](docs/storage.md). Option-chain collection, financial calculations, policy/trade domains, alerts and the complete workflow remain **unimplemented**.
 
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
+
+## Storage tools
+
+Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal, not a trading ledger or approval system. No database server needs starting.
 
 ## Retained utilities
 
@@ -19,6 +23,8 @@ The former generic trading framework has been removed: no backtest/paper/report 
 These utilities are candidates for reuse, not a validated options data pipeline. Every download must specify its provider. `local_parquet` generates synthetic bars; it does not retrieve market prices. Data-source entitlements, provenance and production storage remain part of the new implementation work.
 
 ## Development
+
+Keep PRs small and focused, with concise code that is easy for a human to review. Database changes must include their schema and migration impact in the PR.
 
 Python 3.11+ and `uv`:
 
