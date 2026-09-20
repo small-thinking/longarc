@@ -10,6 +10,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Rule decisions and recorded execution results
+
+- Added deterministic, versioned advisory screening with explicit evidence gates, HOLD/WATCH/exit/roll/entry outcomes and persisted reasons. Known risk exits outrank unknown unrelated inputs; no silent policy override or auto-trade.
+- Added an idempotent actual-execution journal and matched partial-close/roll-episode realized P&L, fee allocation and remaining recorded quantities. Missing fees remain unknown; cumulative realized-only drawdown excludes open/stock risk.
+- Reuses observations schema v2: no tables/columns/indexes or migration. Does not promote provisional holdings into fills, alter real account data, or activate a schedule.
+- Validation: 144 tests including synthetic boundary, missing-data, fee, concurrent-close and CLI cases; lint/types/governance pass. PR pending. Remaining: broker reconciliation, corrections, open-position/portfolio valuation and validated empirical calibration.
+
+
 ### 2026-09-20 — Closed-session idempotency
 
 - PR #16 merged and local main synchronized to `3d94447`.
