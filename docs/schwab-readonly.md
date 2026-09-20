@@ -95,3 +95,10 @@ For a user-requested read during a verified closed market, pass `--closed-sessio
 The general observation journal still rejects conflicting reuse of a key. This capture adapter alone returns the original evidence for an equivalent capture, including retries after a code upgrade. No schema migration or deletion of old duplicates is performed. Repeated checks that reuse a snapshot do not add a database attempt log; their execution receipt reports `existing`.
 
 Suggested request: “Use the LongArc read-only workflow to read the current Schwab QQQ candidates, ingest quotes/Greeks, and generate history and fee-aware comparisons. Verify closed-market state and deduplicate against its last session if applicable. Do not place orders.”
+
+
+## Rule evaluation and actual executions
+
+After capture/calculation, use `options decide` with the current explicit policy JSON and verified facts; see [decision and actual-result contracts](calculations.md#deterministic-decisions-and-actual-results). Retain the decision ID/hash. The caller records evidence for usability/dividend/position checks and distinguishes unknown from false; the rule script does not verify those claims independently. Historical patterns and LLM commentary cannot bypass an existing policy trigger.
+
+After a user-reported execution, inspect supplied or authorized visible execution confirmation and record actual fills/fees using `options execution-add`; a recommendation or submitted/unfilled order is not a fill. Record partial executions separately with stable IDs and link each close to its opening. Preserve policy/decision IDs, use the same episode through roll legs, and verify writes. Use `options performance` to report recorded cumulative option results with its open-risk/stock-P&L limits. No transaction is executed by these tools.

@@ -6,13 +6,13 @@ Local investment tooling being rebuilt around the QQQ covered-call plan.
 
 The only active product plan is the migrated QQQ strategy: infrequent manual trades, frequent observation and deterministic calculations, and complete records. Start with `private/qqq-covered-call-plan/README.md` in the local investment workspace. The five personal planning files are excluded from Git and are not included in a fresh clone.
 
-SQLite storage foundation is implemented: initialization, observation writes/reads, health checks and backup/restore through a JSON CLI. See [storage operations](docs/storage.md). Pure quote and explicit-quantity scenario calculations with audit logging are available. Browser-assisted candidate-chain capture, sparse history reports and dated fee estimates are available through `options`; see [the runbook](docs/schwab-readonly.md#repeatable-candidate-capture-and-history). Unattended API collection, scheduling, policy/trade domains and alerts remain **unimplemented**.
+SQLite storage foundation is implemented: initialization, observation writes/reads, health checks and backup/restore through a JSON CLI. See [storage operations](docs/storage.md). Pure quote and explicit-quantity scenario calculations with audit logging are available. Browser-assisted candidate-chain capture, sparse history reports and dated fee estimates are available through `options`; see [the runbook](docs/schwab-readonly.md#repeatable-candidate-capture-and-history). Deterministic advisory rules and an evidence-backed manual execution journal are available; see [decision and result tracking](docs/calculations.md#deterministic-decisions-and-actual-results). Unattended API collection, scheduling, automatic broker reconciliation and alerts remain **unimplemented**.
 
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
 
 ## Holding tracking
 
-Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). Supplied openings remain provisional; current quantities and actual exits/rolls are not reconciled.
+Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). The original holding tables remain provisional. The separate execution journal matches recorded closes to openings and reports remaining recorded quantities; it still requires fresh broker reconciliation.
 
 Repeated imports are idempotent. After verifying a closed market, `options ingest --closed-session YYYY-MM-DD` reuses an unchanged capture from that last market session, preserving its original collection time. Changed values or coverage still create a new record; active-market reads retain their separate times.
 

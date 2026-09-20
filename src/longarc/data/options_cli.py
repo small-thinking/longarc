@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from longarc.analytics.cost_journal import estimate_and_log
+from longarc.analytics.decisions import decide_and_log
+from longarc.analytics.executions import performance, record_execution
 from longarc.analytics.history import build_report, render_markdown
 from longarc.data.option_capture import ingest_capture
 from longarc.storage import store
@@ -20,7 +22,13 @@ def _json(path: str) -> Any:
 def run(args: argparse.Namespace) -> int:
     try:
         path = Path(args.db)
-        if args.options_command == "ingest":
+        if args.options_command == "decide":
+            result = decide_and_log(path, _json(args.file), _json(args.policy))
+        elif args.options_command == "execution-add":
+            result = record_execution(path, _json(args.file))
+        elif args.options_command == "performance":
+            result = performance(path, args.account, args.mode)
+        elif args.options_command == "ingest":
             result = ingest_capture(path, _json(args.file), mode=args.mode,
                                     closed_session=args.closed_session)
         elif args.options_command == "costs":
@@ -53,13 +61,18 @@ def add_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser(
         "options", help="Capture ingestion, sparse history, cost estimates")
     commands = parser.add_subparsers(dest="options_command", required=True)
-    for name in ("ingest", "history", "costs"):
+    for name in ("ingest", "history", "costs", "decide", "execution-add", "performance"):
         command = commands.add_parser(name)
         command.add_argument("--db", required=True, help="Existing local observation database")
-        if name in ("ingest", "costs"):
+        if name in ("ingest", "costs", "decide", "execution-add"):
             command.add_argument("--file", required=True, help="Capture or cost-request JSON")
         if name in ("ingest", "history"):
             command.add_argument("--mode", choices=("observe", "shadow"), default="observe")
+        if name == "decide":
+            command.add_argument("--policy", required=True, help="Explicit local policy JSON")
+        if name == "performance":
+            command.add_argument("--account", required=True, help="Local account alias")
+            command.add_argument("--mode", choices=("manual", "shadow"), default="manual")
         if name == "ingest":
             command.add_argument("--closed-session", help="Verified last closed market date")
         if name == "costs":
