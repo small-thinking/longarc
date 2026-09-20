@@ -59,3 +59,19 @@ bash scripts/ci/validate_governance.sh
 ```
 
 [Current plan](docs/plan.md) · [High-level work note](docs/track.md)
+
+### Unified selected-quote history
+
+`options ingest` accepts canonical browser captures and `manual-schwab-selected-rows-v1`
+files. Use `--observation-id ID` instead of `--file` to normalize a saved
+`manual-evidence-v1` or `manual-tenor-comparison-v1` QQQ observation. Imports append
+standard history records linked to the original evidence, preserve collection time
+and mode, and are safe to retry. Selected rows remain incomplete; missing source
+timestamps, underlying data and contract multipliers remain unknown. Explicitly
+percent-labelled OTM/touch probabilities are available as fractions in snapshots;
+they are provider estimates, not calibrated realized probabilities.
+
+History retains closed-session observations for audit but excludes intervals with
+an explicitly verified closed-session endpoint from change statistics. Reports can be
+requested ad hoc with `options history`; this does not enable scheduling, trade
+replay, loss-probability estimation or expected monthly-income modeling.

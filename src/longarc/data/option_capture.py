@@ -24,6 +24,7 @@ FIELDS = {
     "impliedvolitility": "iv",  # Spelling displayed by the Schwab table.
     "volume": "volume", "oi": "open_interest", "openinterest": "open_interest",
     "bidsize": "bid_size", "asksize": "ask_size",
+    "probtouching": "probability_touch", "probotm": "probability_otm",
 }
 MONEY = {"strike_u", "bid_u", "ask_u", "last_u", "underlying_price_u"}
 
@@ -44,12 +45,16 @@ def _number(value: Any, field: str) -> int | float | None:
         raise ValueError(f"invalid {field}")
     if field in MONEY:
         number *= 1_000_000
-    if field == "iv" and text.endswith("%"):
+    if field.startswith("probability_") and not text.endswith("%"):
+        raise ValueError("Probability unit must be explicit percent")
+    if (field == "iv" or field.startswith("probability_")) and text.endswith("%"):
         number /= 100
     if field in MONEY or field in ("volume", "open_interest", "bid_size", "ask_size"):
         if number < 0 or number != number.to_integral_value() or number >= 2**63:
             raise ValueError(f"invalid {field}")
         return int(number)
+    if field.startswith("probability_") and not 0 <= number <= 1:
+        raise ValueError("Invalid probability")
     if field == "delta" and not 0 <= number <= 1:
         raise ValueError("invalid CALL delta")
     if field in ("iv", "gamma", "vega") and number < 0:
@@ -75,6 +80,8 @@ def normalize_capture(raw: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(requested, dict) or not isinstance(raw.get("slices"), list):
         raise ValueError("requested object and slices array required")
     warnings: list[str] = ["capture_time_analysis_clock", "full_listed_chain_not_verified"]
+    if raw.get("selection") == "selected_rows_only":
+        warnings.append("selected_rows_only")
     quotes: dict[tuple[str, int], dict[str, Any]] = {}
     rejected: list[dict[str, Any]] = []
     coverage: list[dict[str, Any]] = []
@@ -131,6 +138,7 @@ def normalize_capture(raw: dict[str, Any]) -> dict[str, Any]:
                 "bid_u", "ask_u", "last_u", "delta", "theta", "gamma", "vega", "iv",
                 "volume", "open_interest", "quote_at", "greeks_at", "underlying_at",
                 "underlying_price_u", "bid_size", "ask_size", "iv_unit",
+                "probability_touch", "probability_otm",
             )}
             snapshot.update(values, captured_at=stamp)
             for field in ("quote_at", "greeks_at", "underlying_at"):

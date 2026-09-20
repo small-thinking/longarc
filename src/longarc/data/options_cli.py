@@ -12,6 +12,7 @@ from longarc.analytics.decisions import decide_and_log
 from longarc.analytics.executions import performance, record_execution
 from longarc.analytics.history import build_report, render_markdown
 from longarc.data.option_capture import ingest_capture
+from longarc.data.option_import import ingest_observation, selected_capture
 from longarc.storage import store
 
 
@@ -29,8 +30,15 @@ def run(args: argparse.Namespace) -> int:
         elif args.options_command == "performance":
             result = performance(path, args.account, args.mode)
         elif args.options_command == "ingest":
-            result = ingest_capture(path, _json(args.file), mode=args.mode,
-                                    closed_session=args.closed_session)
+            if args.observation_id:
+                result = ingest_observation(path, args.observation_id, mode=args.mode,
+                                            closed_session=args.closed_session)
+            else:
+                raw = _json(args.file)
+                if raw.get("format") == "manual-schwab-selected-rows-v1":
+                    raw = selected_capture(raw)
+                result = ingest_capture(path, raw, mode=args.mode or "observe",
+                                        closed_session=args.closed_session)
         elif args.options_command == "costs":
             result = estimate_and_log(path, _json(args.file), _json(args.fees))
         else:
@@ -64,16 +72,20 @@ def add_parser(subparsers: Any) -> None:
     for name in ("ingest", "history", "costs", "decide", "execution-add", "performance"):
         command = commands.add_parser(name)
         command.add_argument("--db", required=True, help="Existing local observation database")
-        if name in ("ingest", "costs", "decide", "execution-add"):
+        if name in ("costs", "decide", "execution-add"):
             command.add_argument("--file", required=True, help="Capture or cost-request JSON")
         if name in ("ingest", "history"):
-            command.add_argument("--mode", choices=("observe", "shadow"), default="observe")
+            command.add_argument("--mode", choices=("observe", "shadow"),
+                                 default="observe" if name == "history" else None)
         if name == "decide":
             command.add_argument("--policy", required=True, help="Explicit local policy JSON")
         if name == "performance":
             command.add_argument("--account", required=True, help="Local account alias")
             command.add_argument("--mode", choices=("manual", "shadow"), default="manual")
         if name == "ingest":
+            origin = command.add_mutually_exclusive_group(required=True)
+            origin.add_argument("--file", help="Canonical or selected-row capture JSON")
+            origin.add_argument("--observation-id", help="Known legacy observation to normalize")
             command.add_argument("--closed-session", help="Verified last closed market date")
         if name == "costs":
             command.add_argument("--fees", required=True, help="Dated fee schedule JSON")

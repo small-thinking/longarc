@@ -10,6 +10,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-20 — Unified selected-row observation ingestion
+
+- Added explicit legacy observation/file adapters into the canonical options history stream, with evidence links, original clocks, preserved observe/shadow modes and idempotent retries. Original records are unchanged; selected coverage and unknown source fields remain explicit.
+- Normalized percent-labelled provider OTM/touch estimates. Intervals with a verified closed-session endpoint are excluded from history change statistics while audit points remain visible.
+- No database schema change or migration; historical conversion appends derived observations. Ad-hoc reports remain supported without scheduling. Trade lifecycle replay and calibrated monthly-income/loss estimates remain pending.
+- Validation: 149 tests, lint/types/governance; synthetic fixtures plus local historical conversion/readback. PR pending; not merged.
+
+
 ### 2026-09-20 — Rule decisions and recorded execution results
 
 - Added deterministic, versioned advisory screening with explicit evidence gates, HOLD/WATCH/exit/roll/entry outcomes and persisted reasons. Known risk exits outrank unknown unrelated inputs; no silent policy override or auto-trade.
