@@ -7,12 +7,14 @@ from typing import Any
 
 from longarc.analytics.estimates import compare_replays, summarize_replays
 from longarc.analytics.replay import FORMAT
+from longarc.core.symbols import canonical_symbol
 from longarc.storage import store
 
 
 def estimate_history(path: Path, *, cycles_per_month: float | None = None,
                      left_policy: str | None = None, right_policy: str | None = None,
-                     limit: int = 10000) -> dict[str, Any]:
+                     limit: int = 10000, symbol: str = "QQQ") -> dict[str, Any]:
+    symbol = canonical_symbol(symbol)
     if type(limit) is not int or not 1 <= limit <= 100000:
         raise ValueError("limit must be 1..100000")
     if bool(left_policy) != bool(right_policy):
@@ -22,7 +24,7 @@ def estimate_history(path: Path, *, cycles_per_month: float | None = None,
         rows = db.execute(
             "SELECT record_id,payload_json FROM observations WHERE scope=? AND mode='shadow' "
             "ORDER BY observed_at,recorded_at,record_id LIMIT ?",
-            ("options:QQQ:replays", limit + 1),
+            (f"options:{symbol}:replays", limit + 1),
         ).fetchall()
     if len(rows) > limit:
         raise ValueError("Replay history exceeds limit; increase limit, never truncate estimates")
@@ -33,15 +35,18 @@ def estimate_history(path: Path, *, cycles_per_month: float | None = None,
         if payload["inputs"].get("format") != FORMAT:
             continue
         r = payload["results"]
+        if canonical_symbol(r.get("symbol", "QQQ")) != symbol:
+            raise ValueError("Replay result symbol conflicts with journal scope")
         key = (r["episode_id"], r["policy_hash"], r["assumptions_hash"])
         latest[key] = r
         records[key] = row["record_id"]
     results = list(latest.values())
     report = summarize_replays(results, cycles_per_month=cycles_per_month)
+    report["symbol"] = symbol
     report["replay_record_ids"] = sorted(records.values())
     report["stored_revisions"] = len(rows)
     report["latest_revisions"] = len(results)
-    report["watch_contracts"] = [dict(expiry_date=expiry, strike_u=strike)
+    report["watch_contracts"] = [dict(symbol=symbol, expiry_date=expiry, strike_u=strike)
                                   for expiry, strike in sorted({
                                       (c["expiry_date"], c["strike_u"])
                                       for r in results for c in r.get("watch_contracts", [])})]
@@ -53,7 +58,8 @@ def estimate_history(path: Path, *, cycles_per_month: float | None = None,
 
 
 def render_estimate(report: dict[str, Any]) -> str:
-    lines = ["# QQQ observed-checkpoint replay estimates", "", f"Status: {report['status']}",
+    lines = [f"# {report.get('symbol', 'QQQ')} observed-checkpoint replay estimates",
+             "", f"Status: {report['status']}",
              "", "All monetary values below are dollars. Results are hypothetical option overlay "
              "P&L, not actual fills or a forecast of total portfolio returns.", ""]
 

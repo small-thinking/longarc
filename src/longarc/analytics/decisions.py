@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from longarc.analytics.metrics import NY, _integer, _number, _time
+from longarc.core import symbols
 from longarc.storage import store
 
 
@@ -45,8 +46,10 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     if exit_days is None:
         raise ValueError("latest_exit_dte required")
     f = request["facts"]
-    if f.get("symbol") != "QQQ" or f.get("option_type") != "CALL":
-        raise ValueError("Only QQQ CALL facts are supported")
+    symbol = symbols.canonical_symbol(f.get("symbol"))
+    if f.get("option_type") != "CALL":
+        raise ValueError("Only CALL facts are supported")
+    symbols.require_policy_symbol(symbol, policy)
     checks: dict[str, bool | None] = {}
     for key in ("position_verified", "coverage_verified", "orders_clear", "quote_usable",
                 "greeks_usable", "underlying_usable", "dividend_window_clear", "market_open"):
@@ -56,7 +59,8 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
 
     def output(action: str) -> dict[str, Any]:
-        return {"action": action, "reasons": reasons, "checks": checks, "metrics": metrics,
+        return {"symbol": symbol, "action": action, "reasons": reasons,
+                "checks": checks, "metrics": metrics,
                 "unknown_checks": [k for k, v in checks.items() if v is None],
                 "execution": "human_only" if checks["market_open"] else "recheck_before_execution",
                 "warnings": ["Advisory only; caller evidence and freshness are not independently "
@@ -152,7 +156,7 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
                 nonnegative_net_credit=credit >= 0 if credit is not None else None,
                 matched_roll_quantity=replacement.get("contracts") == qty,
                 matched_multiplier=new_multiplier == multiplier and multiplier is not None,
-                same_underlying=replacement.get("symbol") == f.get("symbol") == "QQQ",
+                same_underlying=replacement.get("symbol") == symbol,
                 call_only=replacement.get("option_type") == "CALL",
             )
             checks.update({"roll_" + k: v for k, v in entry.items()})
@@ -203,14 +207,20 @@ def decide_and_log(path: Path, request: dict[str, Any], policy: dict[str, Any]) 
         result = {"action": "ERROR", "status": "error", "error": str(exc)}
     if not request.get("evidence_ids"):
         raise ValueError("Decision requires source evidence IDs")
+    try:
+        symbol = symbols.canonical_symbol(request.get("facts", {}).get("symbol"))
+    except (ValueError, AttributeError):
+        symbol = "invalid"  # Invalid identities must never be attributed to another asset.
     event = {
-        "idempotency_key": request["idempotency_key"], "scope": "options:QQQ:decisions",
+        "idempotency_key": request["idempotency_key"],
+        "scope": f"options:{symbol}:decisions",
         "mode": request["mode"], "kind": "error" if result["action"] == "ERROR" else
         "no_action" if result["action"] in
         {"HOLD", "WATCH", "NO_ENTRY", "INSUFFICIENT_DATA", "RECONCILE"} else "calculation",
         "observed_at": request["as_of"], "source": request["source"],
         "quality": "synthetic" if request["mode"] == "shadow" else "unverified",
-        "code_version": "decisions-v1:" + hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "code_version": "decisions-v1:" + hashlib.sha256(
+            Path(__file__).read_bytes() + Path(symbols.__file__).read_bytes()).hexdigest(),
         "inputs": {"request": request, "policy": policy}, "results": result,
         "policy_hash": store.digest(policy), "evidence_ids": request["evidence_ids"],
     }

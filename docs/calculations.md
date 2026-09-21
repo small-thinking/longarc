@@ -57,6 +57,51 @@ The existing local covered-call-advisor formulas were inspected at commit `ce97a
 Strategy thresholds remain unchanged and unapproved. Next: specify source freshness/Greek units and a minimal policy contract, then add manual fill/reconciliation records before treating scenarios as current holdings. Automatic collection, scheduling/alerts, candidate ranking, assignment/dividend modeling and live-trading readiness are still separate work.
 
 
+## Symbol scope and compatibility
+
+All new requests should carry the exact canonical uppercase ticker; spelling is
+not corrected automatically. Interfaces remain standard short CALLs with explicit
+share coverage and contract multipliers. Adding a ticker does not validate its
+contract deliverable, source availability or trading policy.
+
+| Interface | Symbol and isolation |
+| --- | --- |
+| Browser collector | `options.symbol`, default QQQ for old callers; must match the exact observed Schwab stock/ETF Options URL before any UI actions |
+| Canonical capture | Required top-level `symbol`; scopes become `options:<symbol>`; conflicting slice/requested-contract symbols and PUT declarations fail |
+| Selected rows | `manual-schwab-selected-rows-v2` requires top-level `symbol`; v1 and legacy tenor imports remain QQQ and reject conflicting declarations |
+| Decision | `facts.symbol` must equal policy `scope.underlying`; replacement must be the same symbol and CALL; logged under `options:<symbol>:decisions` |
+| Cost scenario | Optional top-level `symbol`, legacy default QQQ; logs under `options:<symbol>:costs` |
+| Execution | `contract.symbol`; account/mode/execution-ID identity stays unchanged; close matches the full opening contract; an episode cannot cross symbols |
+| Replay | `contract.symbol`, legacy default QQQ; all source scopes, source symbols, policy and replacement must agree; logs under `options:<symbol>:replays` |
+| History / estimates | `--symbol`, legacy default QQQ; replay groups and paired comparisons never combine underlyings |
+| Performance | No symbol means account aggregate plus `by_symbol`; `--symbol IAU` filters the ledger; unknown fees affect that asset and aggregate net results |
+
+A policy's existing `policy_parameters` and `roll` fields are unchanged. Add
+`"scope": {"underlying": "IAU"}` to an explicitly chosen IAU policy JSON.
+Omitting scope is supported only for legacy QQQ policies; a present but incomplete
+scope is invalid. Policy hashes retain the full supplied policy. New IAU numerical
+parameters are a separate decision, not inferred from enabling its scripts.
+
+`dividend_window_clear` remains an evidence-backed check for every symbol. A
+verified lack of distributions can justify true; the ticker IAU alone does not.
+The engine still accepts delta as delta, not a calibrated assignment probability.
+Coverage and pending orders must be verified for the same account and symbol;
+shared buyback cash cannot be independently budgeted in full for both assets.
+
+```bash
+uv run python -m longarc.cli options history --db private/longarc.sqlite3 --symbol IAU --start 2026-09-21 --end 2026-10-23
+uv run python -m longarc.cli options decide --db private/longarc.sqlite3 --file private/iau-decision.json --policy private/iau-policy.json
+uv run python -m longarc.cli options estimate --db private/longarc.sqlite3 --symbol IAU
+uv run python -m longarc.cli options performance --db private/longarc.sqlite3 --account LOCAL_ALIAS --symbol IAU
+uv run python -m longarc.cli options performance --db private/longarc.sqlite3 --account LOCAL_ALIAS
+```
+
+No tables, columns, types, constraints or indexes change. Existing QQQ records are
+not rewritten; their scopes and actual-execution idempotency keys remain valid.
+Legacy replay results without a symbol are interpreted as QQQ. Revised calculations
+retain their version fingerprints; do not reuse a calculation idempotency key for
+changed inputs or code. No historical fills or quote timestamps are invented.
+
 ## Deterministic decisions and actual results
 
 `options decide` applies the explicitly supplied private policy's thresholds, with priority: verified position → known risk/time/dividend exit → profit exit → WATCH/eligible roll → HOLD. Flat positions screen one STO candidate; they do not automatically size or rank a portfolio. Source usability, current position, coverage, orders, dividend calendar, sizing and re-entry cooldown are explicit evidence-backed caller checks. `true` is not inferred from a recent capture time. Missing critical checks block HOLD/entry; known risk signals still return a risk exit even with unrelated missing data. An expired contract requires settlement reconciliation. Closed-market output requires rechecking before execution.
@@ -71,7 +116,7 @@ uv run python -m longarc.cli options execution-add --db private/longarc.sqlite3 
 uv run python -m longarc.cli options performance --db private/longarc.sqlite3 --account LOCAL_ALIAS --mode manual
 ```
 
-The execution journal accepts only supplied actual QQQ short-call executions/events: STO, BTC, confirmed EXPIRE and confirmed ASSIGN. Required fields are `account`, `mode` (manual/shadow), `external_execution_id`, `action`, exact `contract`, `quantity`, `price_u`, `fees_u` (null if unknown), `executed_at`, `source`, `evidence_ref`, `episode_id`. BTC/EXPIRE/ASSIGN also require `opening_execution_id`. Optional `policy_hash` and `decision_record_id` connect results to strategy/decision provenance. See `tests/test_executions.py` for synthetic requests. References are retained, not independently authenticated by the parser.
+The execution journal accepts only evidence-backed short-call executions/events with explicit symbols, including QQQ and IAU: STO, BTC, confirmed EXPIRE and confirmed ASSIGN. Required fields are `account`, `mode` (manual/shadow), `external_execution_id`, `action`, exact `contract`, `quantity`, `price_u`, `fees_u` (null if unknown), `executed_at`, `source`, `evidence_ref`, `episode_id`. BTC/EXPIRE/ASSIGN also require `opening_execution_id`. Optional `policy_hash` and `decision_record_id` connect results to strategy/decision provenance. See `tests/test_executions.py` for synthetic requests. References are retained, not independently authenticated by the parser.
 
 Each close explicitly allocates to one opening; split a multi-lot fill into uniquely identified allocation records and split its fees without duplicating them. Import each lot chronologically. Roll is two actual legs sharing an episode, so new credit never erases the old realized loss. Replays of account/mode/execution ID are idempotent; different content conflicts. Transactions prevent concurrent overclosing. The derived remaining quantity reflects only recorded events, not an independently reconciled broker position. Existing `holding_lots` records are not automatically imported, because provisional openings must not become actual fills.
 
@@ -83,7 +128,7 @@ Initially use the explicitly versioned rules, current verified facts and clearly
 
 As data grow, compare like-for-like DTE/Delta regimes and strategy versions, showing numbers of completed episodes, calendar coverage and missingness. Later empirical calibration needs held-out or walk-forward checks and transaction costs; correlated quotes are not independent trials. Choosing a threshold on the same trades used to advertise its performance overstates evidence. Record any policy change prospectively.
 
-Realized option P&L alone cannot measure strategy risk or value over buy-and-hold. That needs contemporaneous marks for all open options and stock, dividends, cash flows and a matching QQQ benchmark. Open losses, sacrificed upside and assignment effects must be included before claiming portfolio drawdown, return, Sharpe ratio or strategy superiority. This increment does not implement that portfolio valuation or empirical policy optimization.
+Realized option P&L alone cannot measure strategy risk or value over buy-and-hold. That needs contemporaneous marks for all open options and stock, dividends, cash flows and a matching underlying benchmark. Open losses, sacrificed upside and assignment effects must be included before claiming portfolio drawdown, return, Sharpe ratio or strategy superiority. This increment does not implement that portfolio valuation or empirical policy optimization.
 
 ## Policy replay and adaptive descriptive estimates
 
@@ -110,7 +155,7 @@ Replay request contract (all numbers here are synthetic interface examples):
 {
   "episode_id": "study-start-001",
   "as_of": "2026-09-23T20:00:00Z",
-  "contract": {"expiry_date": "2026-10-16", "strike_u": 110000000},
+  "contract": {"symbol": "QQQ", "expiry_date": "2026-10-16", "strike_u": 110000000},
   "assumptions": {
     "contracts": 1, "multiplier": 100, "covered_shares": 100,
     "opening_slippage_u": 10000, "closing_slippage_u": 20000,

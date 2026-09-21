@@ -4,11 +4,18 @@ Record a short high-level entry after each meaningful increment: what capability
 
 ## Current work
 
-Rebuild around the migrated QQQ plan. The canonical work packages are in the local `private/qqq-covered-call-plan/PLAN.md`; private policy values are not duplicated here.
+Build the shared QQQ/IAU covered-call workflow around the migrated plan. The canonical work packages are in the local `private/qqq-covered-call-plan/PLAN.md`; private policy values are not duplicated here.
 
 SQLite was selected and the local observation storage slice is implemented. The complete QQQ application remains pending. Existing OHLCV utilities are reuse candidates, not completed QQQ work packages. Earlier generic trading milestones are retired; their development history is preserved in Git.
 
 ## Change Log
+
+### 2026-09-21 — Shared multi-symbol covered-call workflow
+
+- Generalized bounded Schwab capture and selected-row import, advisory decisions, executions, costs and checkpoint replay to explicit stock/ETF CALL symbols, including QQQ and IAU. One skill/runbook selects the symbol and its own policy; source identity, roll legs and policy mismatches fail explicitly.
+- History, replay revisions, estimates and paired comparisons stay separated by symbol. Execution reports provide both the account aggregate and symbol breakdowns. Legacy unscoped policy/replay/selected-row formats retain QQQ meaning; existing records are not rewritten.
+- No database schema or dependency changes. No new trading strategy thresholds, automatic order execution or scheduler changes. Standard-looking CALL support does not establish adjusted-contract or other derivative support; sparse replay remains checkpoint simulation rather than empirical expected return.
+- Validation: 259 Python tests, 9 Node bridge tests, Ruff, mypy, governance and skill validation pass. Synthetic QQQ/IAU/SPY cases cover symbol isolation, policy/roll conflicts, matching fills, CLI routing and legacy retries. Existing private IAU evidence was normalized and read back: 10 contract histories, idempotent retry, unchanged prior observation hashes and schema/holding tables. No fresh browser capture was performed for this increment. PR pending publication; not merged.
 
 ### 2026-09-20 — Shared-policy replay and adaptive estimates
 
@@ -111,4 +118,4 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Verification
 
-Latest implementation evidence: 74 passing tests, lint/types/governance, and isolated synthetic plus browser-quote calculation/readback/retry/backup checks. Browser data are unverified and incomplete; this validates the engineering loop, not a trading strategy. Earlier entries retain historical test counts.
+Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlier entries retain historical test counts. Browser data are unverified and incomplete; these checks validate the engineering workflow, not a trading strategy.

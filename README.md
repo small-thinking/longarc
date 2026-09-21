@@ -1,14 +1,34 @@
 # LongArc
 
-Local investment tooling being rebuilt around the QQQ covered-call plan.
+Local tooling for covered-call analysis and manual execution records across QQQ and IAU.
 
 ## Current scope
 
-The only active product plan is the migrated QQQ strategy: infrequent manual trades, frequent observation and deterministic calculations, and complete records. Start with `private/qqq-covered-call-plan/README.md` in the local investment workspace. The five personal planning files are excluded from Git and are not included in a fresh clone.
+QQQ and IAU share one covered-call workflow with separate symbol-scoped policies: infrequent manual trades, frequent observation and deterministic calculations, and complete records. Start with `private/qqq-covered-call-plan/README.md` in the local investment workspace. Personal planning and policy files are excluded from Git and are not included in a fresh clone.
 
 SQLite storage foundation is implemented: initialization, observation writes/reads, health checks and backup/restore through a JSON CLI. See [storage operations](docs/storage.md). Pure quote and explicit-quantity scenario calculations with audit logging are available. Browser-assisted candidate-chain capture, sparse history reports and dated fee estimates are available through `options`; see [the runbook](docs/schwab-readonly.md#repeatable-candidate-capture-and-history). Deterministic advisory rules and an evidence-backed manual execution journal are available; see [decision and result tracking](docs/calculations.md#deterministic-decisions-and-actual-results). Unattended API collection, scheduling, automatic broker reconciliation and alerts remain **unimplemented**.
 
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
+
+## Multiple underlyings, one workflow
+
+Capture, rule evaluation, confirmed execution tracking, fee scenarios and replay
+accept explicit uppercase underlying symbols. QQQ and IAU are supported by the
+same standard short-CALL interface; another stock/ETF ticker does not require a
+code branch, but still requires verified contract terms, coverage, source support
+and its own policy. This does not add puts, index/cash-settled options or other
+strategies.
+
+Use `scope.underlying` in each policy and match it to the request's symbol. Old
+unscoped policies belong only to QQQ; IAU cannot silently inherit them. Technical
+support does not adopt new IAU thresholds. The skill selects the asset policy and
+reuses the same [read-only procedure](docs/schwab-readonly.md#multiple-symbol-reviews).
+
+`options history --symbol IAU` and `options estimate --symbol IAU` isolate evidence
+and replay statistics (their legacy default is QQQ). `options performance` shows
+account totals plus `by_symbol`; `--symbol IAU` limits results to IAU. Reports show
+realized option P&L and remaining recorded contracts, not stock P&L or invented
+open-option marks. See [symbol contracts and compatibility](docs/calculations.md#symbol-scope-and-compatibility).
 
 ## Holding tracking
 
@@ -26,7 +46,7 @@ The existing `longarc-development` skill routes manual analysis to the maintaine
 
 ## Storage tools
 
-Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal, not a trading ledger or approval system. No database server needs starting.
+Use `uv run python -m longarc.cli db --help`. Each operation requires `--db`; the local database is `private/longarc.sqlite3`. This is an append-only observation journal supporting separate evidence, calculation and execution records; it does not reconcile broker positions or authorize trades. No database server needs starting.
 
 ## Retained utilities
 
@@ -62,8 +82,9 @@ bash scripts/ci/validate_governance.sh
 
 ### Unified selected-quote history
 
-`options ingest` accepts canonical browser captures and `manual-schwab-selected-rows-v1`
-files. Use `--observation-id ID` instead of `--file` to normalize a saved
+`options ingest` accepts canonical browser captures with explicit `symbol` and
+`manual-schwab-selected-rows-v2` files. Legacy `manual-schwab-selected-rows-v1` files
+retain their QQQ identity. Use `--observation-id ID` instead of `--file` to normalize a saved
 `manual-evidence-v1` or `manual-tenor-comparison-v1` QQQ observation. Imports append
 standard history records linked to the original evidence, preserve collection time
 and mode, and are safe to retry. Selected rows remain incomplete; missing source

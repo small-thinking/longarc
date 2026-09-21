@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from longarc.analytics import costs
+from longarc.core.symbols import canonical_symbol
 from longarc.storage import store
 
 
@@ -13,15 +14,16 @@ def estimate_and_log(
     path: Path, request: dict[str, Any], schedule: dict[str, Any],
 ) -> dict[str, Any]:
     required = {"idempotency_key", "as_of", "source", "mode", "scenario", "evidence_ids"}
-    if set(request) != required:
+    if required - set(request) or set(request) - required - {"symbol"}:
         raise ValueError("Cost request requires " + ", ".join(sorted(required)))
+    symbol = canonical_symbol(request.get("symbol", "QQQ"))
     event = store.validate({
         "idempotency_key": request["idempotency_key"], "observed_at": request["as_of"],
-        "scope": "options:QQQ:costs", "mode": request["mode"], "kind": "calculation",
+        "scope": f"options:{symbol}:costs", "mode": request["mode"], "kind": "calculation",
         "quality": "synthetic" if request["mode"] == "shadow" else "unverified",
         "source": request["source"], "code_version": "costs-v1:" + hashlib.sha256(
             Path(costs.__file__).read_bytes() + Path(__file__).read_bytes()).hexdigest(),
-        "inputs": {"schedule": schedule, "scenario": request["scenario"]},
+        "inputs": {"symbol": symbol, "schedule": schedule, "scenario": request["scenario"]},
         "results": {}, "evidence_ids": request["evidence_ids"],
     })
     try:
@@ -35,5 +37,6 @@ def estimate_and_log(
     saved = store.get_observation(path, receipt["record_id"])
     if saved["payload"]["results"] != result:
         raise ValueError("Cost readback mismatch")
-    return {**result, "record_id": receipt["record_id"], "write_status": receipt["status"],
+    return {**result, "symbol": symbol, "record_id": receipt["record_id"],
+            "write_status": receipt["status"],
             "readback_verified": True}

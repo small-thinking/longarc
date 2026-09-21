@@ -13,6 +13,7 @@ from typing import Any
 
 from longarc.analytics import costs, decisions
 from longarc.analytics.metrics import _time
+from longarc.core import symbols
 from longarc.storage import store
 
 FORMAT = "policy-replay-v1"
@@ -23,7 +24,7 @@ CHECKS = {"market_open", "dividend_window_clear", "quote_usable", "greeks_usable
 def _engine_version() -> str:
     return FORMAT + ":" + hashlib.sha256(
         Path(__file__).read_bytes() + Path(decisions.__file__).read_bytes()
-        + Path(costs.__file__).read_bytes()).hexdigest()
+        + Path(costs.__file__).read_bytes() + Path(symbols.__file__).read_bytes()).hexdigest()
 
 
 def _integer(value: Any, name: str, minimum: int = 0) -> int:
@@ -32,18 +33,20 @@ def _integer(value: Any, name: str, minimum: int = 0) -> int:
     return int(value)
 
 
-def _identity(contract: dict[str, Any]) -> tuple[str, int]:
+def _identity(contract: dict[str, Any], symbol: str = "QQQ") -> tuple[str, int]:
     from datetime import date
-    if contract.get("symbol", "QQQ") != "QQQ" or contract.get("option_type", "CALL") != "CALL":
-        raise ValueError("Replay requires QQQ CALL identity")
+    if (contract.get("symbol", symbol) != symbol
+            or contract.get("option_type", "CALL") != "CALL"):
+        raise ValueError("Replay requires a CALL identity with the same underlying")
     return (date.fromisoformat(contract["expiry_date"]).isoformat(),
             _integer(contract["strike_u"], "strike_u", 1))
 
 
-def _quote(payload: dict[str, Any], identity: tuple[str, int]) -> dict[str, Any] | None:
+def _quote(payload: dict[str, Any], identity: tuple[str, int],
+           symbol: str) -> dict[str, Any] | None:
     return next((q for q in payload["results"].get("quotes", [])
-                 if _identity(q["contract"]) == identity
-                 and q["contract"]["symbol"] == "QQQ"
+                 if q["contract"]["symbol"] == symbol
+                 and _identity(q["contract"], symbol) == identity
                  and q["contract"]["option_type"] == "CALL"), None)
 
 
@@ -69,16 +72,21 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
     frames = request["observations"]
     if not isinstance(frames, list) or not frames:
         raise ValueError("At least one observation required")
-    identity = _identity(request["contract"])
+    symbol = symbols.canonical_symbol(request["contract"].get("symbol", "QQQ"))
+    symbols.require_policy_symbol(symbol, policy)
+    identity = _identity(request["contract"], symbol)
     sources = [store.get_observation(path, f["record_id"])["payload"] for f in frames]
     modes = {s["mode"] for s in sources}
     if len(modes) != 1 or not modes <= {"observe", "shadow"}:
         raise ValueError("Source modes must be uniformly observe or shadow")
     previous = None
     for source in sources:
-        if (source["scope"] != "options:QQQ"
-                or source["inputs"].get("format") != "option-chain-v1"):
-            raise ValueError("Replay requires canonical QQQ chain evidence")
+        if (source["scope"] != f"options:{symbol}"
+                or source["inputs"].get("symbol") != symbol
+                or source["inputs"].get("format") != "option-chain-v1"
+                or any(q["contract"].get("symbol") != symbol
+                       for q in source["results"].get("quotes", []))):
+            raise ValueError("Replay requires canonical chain evidence for the same symbol")
         now = _time(source["observed_at"])
         if previous is not None and now <= previous:
             raise ValueError("Observations must be strictly chronological, without duplicates")
@@ -87,7 +95,7 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
                                      "source_mode": next(iter(modes)),
                                      "engine_version": _engine_version()})
     result: dict[str, Any] = {
-        "episode_id": episode, "policy_hash": store.digest(policy),
+        "episode_id": episode, "symbol": symbol, "policy_hash": store.digest(policy),
         "engine_version": _engine_version(),
         "assumptions_hash": assumptions_hash, "status": "no_entry", "mode": "shadow",
         "source_mode": next(iter(modes)), "started_at": None, "ended_at": None,
@@ -112,10 +120,10 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
         if set(checks) - CHECKS or any(v is not None and type(v) is not bool
                                      for v in checks.values()):
             raise ValueError("Only explicit boolean source checks are accepted")
-        q = _quote(source, key)
+        q = _quote(source, key, symbol)
         snap = q["snapshot"] if q else {}
         now = _time(source["observed_at"])
-        f = {**snap, **checks, "symbol": "QQQ", "option_type": "CALL",
+        f = {**snap, **checks, "symbol": symbol, "option_type": "CALL",
              "expiry_date": key[0], "strike_u": key[1], "contracts": a["contracts"],
              "multiplier": a["multiplier"], "position_contracts": a["contracts"] if opening else 0,
              "position_verified": True, "orders_clear": True, "sizing_approved": True,
@@ -168,7 +176,7 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
         replacement = None
         replacement_key = None
         if opening and a["allow_roll"] and frame.get("replacement"):
-            replacement_key = _identity(frame["replacement"])
+            replacement_key = _identity(frame["replacement"], symbol)
             replacement = facts(source, frame, replacement_key, True)
             if priced(replacement):
                 rc = cost(replacement, replacement["bid_u"])
@@ -235,7 +243,8 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
         result["status"] = "incomplete"
         result["net_option_pnl_u"] = None
     if opening:
-        result["watch_contracts"] = [{"expiry_date": identity[0], "strike_u": identity[1]}]
+        result["watch_contracts"] = [{"symbol": symbol, "expiry_date": identity[0],
+                                      "strike_u": identity[1]}]
         result["realized_closed_legs_pnl_u"] = total
     return result
 
@@ -246,7 +255,7 @@ def replay_and_log(path: Path, request: dict[str, Any], policy: dict[str, Any],
     # An episode may grow a path, but must not move its entry or rewrite old facts.
     with store.connect(path, readonly=True) as db:
         rows = db.execute("SELECT payload_json FROM observations WHERE scope=? AND mode='shadow'",
-                          ("options:QQQ:replays",)).fetchall()
+                          (f"options:{result['symbol']}:replays",)).fetchall()
     for row in rows:
         old = json.loads(row["payload_json"])
         prior = old["results"]
@@ -262,7 +271,8 @@ def replay_and_log(path: Path, request: dict[str, Any], policy: dict[str, Any],
     version = _engine_version()
     identity = {"request": request, "policy": policy, "schedule": schedule, "version": version}
     event = {
-        "idempotency_key": "replay:" + store.digest(identity), "scope": "options:QQQ:replays",
+        "idempotency_key": "replay:" + store.digest(identity),
+        "scope": f"options:{result['symbol']}:replays",
         "mode": "shadow", "kind": "calculation", "quality": "synthetic",
         "observed_at": request["as_of"], "source": "observed_checkpoint_replay",
         "code_version": version, "inputs": {"format": FORMAT, **identity}, "results": result,

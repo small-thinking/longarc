@@ -10,6 +10,8 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from longarc.core.symbols import canonical_symbol
+
 _HASH = re.compile(r"[0-9a-f]{64}")
 _STATUSES = ("closed", "open", "no_entry", "incomplete")
 
@@ -52,8 +54,8 @@ def summarize_replays(
         or cycles_per_month <= 0
     ):
         raise ValueError("cycles_per_month must be finite and positive")
-    unique: dict[tuple[str, str, str], dict[str, Any]] = {}
-    groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    unique: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for item in results:
         if not isinstance(item, dict):
             raise ValueError("each replay must be an object")
@@ -92,15 +94,16 @@ def summarize_replays(
             raise ValueError("closed episodes require timestamps and net P&L")
         if item["status"] != "closed" and pnl is not None:
             raise ValueError("unclosed episodes cannot have closed net P&L")
-        identity = (episode, item["policy_hash"], item["assumptions_hash"])
+        symbol = canonical_symbol(item.get("symbol", "QQQ"))
+        identity = (symbol, episode, item["policy_hash"], item["assumptions_hash"])
         if identity in unique:
             if unique[identity] != item:
                 raise ValueError(f"conflicting duplicate episode: {episode}")
             continue
         unique[identity] = item
-        groups[(item["policy_hash"], item["assumptions_hash"])].append(item)
+        groups[(symbol, item["policy_hash"], item["assumptions_hash"])].append(item)
     summaries = []
-    for (policy, assumptions), items in sorted(groups.items()):
+    for (symbol, policy, assumptions), items in sorted(groups.items()):
         counts = {status: sum(i["status"] == status for i in items) for status in _STATUSES}
         closed = [i for i in items if i["status"] == "closed"]
         cohorts: dict[str, list[int]] = defaultdict(list)
@@ -114,7 +117,7 @@ def summarize_replays(
         cohort_mean = statistics.mean(means) if means else None
         standard_deviation = statistics.stdev(means) if len(means) >= 2 else None
         summaries.append({
-            "policy_hash": policy, "assumptions_hash": assumptions,
+            "symbol": symbol, "policy_hash": policy, "assumptions_hash": assumptions,
             "episode_ids": sorted(i["episode_id"] for i in items), "counts": counts,
             "evidence_ids": sorted({e for i in items for e in i["evidence_ids"]}),
             "closed_episode_mean_pnl_u": statistics.mean(
@@ -166,20 +169,22 @@ def compare_replays(
     # Validate all episodes using the same contract and duplicate-conflict rules.
     summarize_replays(results)
     unique = {
-        (r["episode_id"], r["policy_hash"], r["assumptions_hash"]): r for r in results
+        (canonical_symbol(r.get("symbol", "QQQ")), r["episode_id"],
+         r["policy_hash"], r["assumptions_hash"]): r for r in results
         if r["policy_hash"] in (left_policy_hash, right_policy_hash)
     }
-    assumptions = sorted({key[2] for key in unique})
+    assumptions = sorted({(key[0], key[3]) for key in unique})
     groups = []
-    for assumption in assumptions:
-        episodes = sorted({key[0] for key in unique if key[2] == assumption})
+    for symbol, assumption in assumptions:
+        episodes = sorted({key[1] for key in unique
+                           if key[0] == symbol and key[3] == assumption})
         counts = {"matched_closed": 0, "unmatched": 0, "incomplete": 0,
                   "conflicting_entry_dates": 0}
         pairs = []
         cohorts: dict[str, list[int]] = defaultdict(list)
         for episode_id in episodes:
-            left = unique.get((episode_id, left_policy_hash, assumption))
-            right = unique.get((episode_id, right_policy_hash, assumption))
+            left = unique.get((symbol, episode_id, left_policy_hash, assumption))
+            right = unique.get((symbol, episode_id, right_policy_hash, assumption))
             if left is None or right is None:
                 counts["unmatched"] += 1
                 continue
@@ -205,7 +210,7 @@ def compare_replays(
         means = [statistics.mean(cohorts[day]) for day in sorted(cohorts)]
         stdev = statistics.stdev(means) if len(means) >= 2 else None
         groups.append({
-            "assumptions_hash": assumption, "counts": counts, "pairs": pairs,
+            "symbol": symbol, "assumptions_hash": assumption, "counts": counts, "pairs": pairs,
             "paired_episode_mean_difference_u": statistics.mean(
                 p["right_minus_left_pnl_u"] for p in pairs
             ) if pairs else None,

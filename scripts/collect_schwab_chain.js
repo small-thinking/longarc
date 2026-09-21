@@ -6,6 +6,11 @@
  * Pass expiry dates and strike centers observed in the page, plus watched contracts.
  */
 async function collectSchwabChain(tab, options, observe) {
+  const symbol = options.symbol === undefined ? "QQQ" : options.symbol;
+  if (typeof symbol !== "string" || symbol.trim() !== symbol ||
+      !/^[A-Z][A-Z0-9.-]{0,14}$/.test(symbol)) {
+    throw new Error("symbol must be an explicit uppercase ticker");
+  }
   const start = new Date().toISOString();
   const requested = {
     expiries: options.expiries,
@@ -18,7 +23,7 @@ async function collectSchwabChain(tab, options, observe) {
     throw new Error("Choose 1-12 observed expiries and 1-12 observed strike centers");
   }
   const result = {
-    format: "schwab-browser-chain-v1", symbol: "QQQ", started_at: start,
+    format: "schwab-browser-chain-v1", symbol, started_at: start,
     captured_at: start, requested, slices: [], errors: [],
     completeness: "visible_windows_only_not_full_listed_chain",
     evidence_ids: [],
@@ -38,7 +43,8 @@ async function collectSchwabChain(tab, options, observe) {
           const region = el.closest('[id^="chains-accord-control-"]');
           return {
             region: region ? region.id : null,
-            label: region?.parentElement?.querySelector("h2")?.textContent || "",
+            label: region?.parentElement?.querySelector("h2")?.textContent ||
+              el.closest("pf3-sdps-accordion-section")?.innerText.split("\n")[0] || "",
             headers: Array.from(el.querySelectorAll("tr"))[0] ?
               Array.from(el.querySelectorAll("tr"))[0].innerText : "",
             cells: Array.from(el.querySelectorAll("tr")).map(row =>
@@ -53,8 +59,11 @@ async function collectSchwabChain(tab, options, observe) {
     return null;
   };
   try {
-    if (!(await tab.url()).includes("/etfs/options/QQQ")) {
-      throw new Error("Open the QQQ research Options tab first");
+    const page = new URL(await tab.url());
+    const route = page.hash.match(/^#\/(?:etfs|stocks)\/options\/([^/?#]+)\/?(?:\?[^#]*)?$/);
+    if (page.protocol !== "https:" || page.hostname !== "client.schwab.com" ||
+        !/^\/retail\/research\/?$/.test(page.pathname) || !route || route[1] !== symbol) {
+      throw new Error(`Open the ${symbol} research Options tab first`);
     }
     await tab.playwright.getByLabel("Strategy", {exact:true}).selectOption({label:"Calls"});
     await observe();
