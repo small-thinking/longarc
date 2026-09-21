@@ -10,6 +10,12 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-21 — Consistent covered-call candidate reports
+
+- The skill routes every QQQ/IAU candidate report to a required field contract: spot/source timing, signed dollar/percent strike distance, bid/ask, Delta, premium, and provider Probability of Touch / Probability of OTM. Missing probabilities stay unknown and are not replaced by Delta or described as strategy win rates.
+- Candidate preference, current action and missing entry requirements are reported separately. This is documentation guidance only; no collector, strategy threshold, schema, dependency or execution change.
+- Validation: documentation diff and skill validation; PR pending creation, not merged. Next: apply these fields to fresh observations while retaining source limitations.
+
 ### 2026-09-21 — Shared multi-symbol covered-call workflow
 
 - Generalized bounded Schwab capture and selected-row import, advisory decisions, executions, costs and checkpoint replay to explicit stock/ETF CALL symbols, including QQQ and IAU. One skill/runbook selects the symbol and its own policy; source identity, roll legs and policy mismatches fail explicitly.
