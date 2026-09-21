@@ -14,7 +14,7 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 - The skill routes every QQQ/IAU candidate report to a required field contract: spot/source timing, signed dollar/percent strike distance, bid/ask, Delta, premium, and provider Probability of Touch / Probability of OTM. Missing probabilities stay unknown and are not replaced by Delta or described as strategy win rates.
 - Candidate preference, current action and missing entry requirements are reported separately. This is documentation guidance only; no collector, strategy threshold, schema, dependency or execution change.
-- Validation: documentation diff and skill validation; PR pending creation, not merged. Next: apply these fields to fresh observations while retaining source limitations.
+- Validation: documentation diff, governance and skill validation pass. PR [#22](https://github.com/small-thinking/longarc/pull/22) open; not merged. Next: apply these fields to fresh observations while retaining source limitations.
 
 ### 2026-09-21 — Shared multi-symbol covered-call workflow
 
