@@ -28,7 +28,8 @@ def run(args: argparse.Namespace) -> int:
         if args.options_command == "replay":
             result = replay_and_log(path, _json(args.file), _json(args.policy), _json(args.fees))
         elif args.options_command == "estimate":
-            result = estimate_history(path, cycles_per_month=args.cycles_per_month,
+            result = estimate_history(path, symbol=args.symbol,
+                                      cycles_per_month=args.cycles_per_month,
                                       left_policy=args.left_policy, right_policy=args.right_policy,
                                       limit=args.limit)
             for name, content in ((args.json_output, store.canonical(result)),
@@ -42,14 +43,15 @@ def run(args: argparse.Namespace) -> int:
         elif args.options_command == "execution-add":
             result = record_execution(path, _json(args.file))
         elif args.options_command == "performance":
-            result = performance(path, args.account, args.mode)
+            result = performance(path, args.account, args.mode, symbol=args.symbol)
         elif args.options_command == "ingest":
             if args.observation_id:
                 result = ingest_observation(path, args.observation_id, mode=args.mode,
                                             closed_session=args.closed_session)
             else:
                 raw = _json(args.file)
-                if raw.get("format") == "manual-schwab-selected-rows-v1":
+                if raw.get("format") in {"manual-schwab-selected-rows-v1",
+                                         "manual-schwab-selected-rows-v2"}:
                     raw = selected_capture(raw)
                 result = ingest_capture(path, raw, mode=args.mode or "observe",
                                         closed_session=args.closed_session)
@@ -57,7 +59,7 @@ def run(args: argparse.Namespace) -> int:
             result = estimate_and_log(path, _json(args.file), _json(args.fees))
         else:
             report = build_report(
-                path, "QQQ", mode=args.mode, start=args.start, end=args.end,
+                path, args.symbol, mode=args.mode, start=args.start, end=args.end,
                 source=args.source, limit=args.limit,
                 expected_dates=_json(args.expected_dates) if args.expected_dates else None,
             )
@@ -95,6 +97,10 @@ def add_parser(subparsers: Any) -> None:
                                  default="observe" if name == "history" else None)
         if name in ("decide", "replay"):
             command.add_argument("--policy", required=True, help="Explicit local policy JSON")
+        if name in ("history", "estimate", "performance"):
+            command.add_argument("--symbol", default=None if name == "performance" else "QQQ",
+                                 help="Ticker; performance defaults to account aggregate, "
+                                      "history/estimate default to QQQ for compatibility")
         if name == "performance":
             command.add_argument("--account", required=True, help="Local account alias")
             command.add_argument("--mode", choices=("manual", "shadow"), default="manual")

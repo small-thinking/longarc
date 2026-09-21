@@ -142,3 +142,57 @@ def test_decision_cli(tmp_path, scenario, policy, capsys):
                  "--policy", str(config)]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["action"] == "HOLD" and result["readback_verified"]
+
+
+@pytest.mark.parametrize('symbol', ['QQQ', 'IAU', 'SPY'])
+@pytest.mark.parametrize('delta,action', [(.1, 'HOLD'), (.22, 'WATCH'), (.32, 'BTC_RISK')])
+def test_scoped_policy_uses_same_exit_engine(scenario, policy, symbol, delta, action):
+    policy['scope'] = {'underlying': symbol}
+    scenario['facts'].update(symbol=symbol, delta=delta)
+    result = evaluate(scenario, policy)
+    assert result['action'] == action
+    assert result['symbol'] == symbol
+
+
+def test_iau_requires_own_policy_and_error_is_logged_under_iau(tmp_path, scenario, policy):
+    db = tmp_path / 'symbols.sqlite3'
+    store.initialize(db)
+    scenario['facts']['symbol'] = 'IAU'
+    result = decide_and_log(db, scenario, policy)
+    assert result['action'] == 'ERROR'
+    assert 'Policy underlying' in result['error']
+    assert store.get_observation(db, result['record_id'])['scope'] == 'options:IAU:decisions'
+    policy['scope'] = {'underlying': 'QQQ'}
+    with pytest.raises(ValueError, match='Policy underlying'):
+        evaluate(scenario, policy)
+    policy['scope']['underlying'] = 'IAU'
+    scenario['idempotency_key'] = 'iau-correct-policy'
+    result = decide_and_log(db, scenario, policy)
+    assert result['action'] == 'HOLD'
+    assert store.get_observation(db, result['record_id'])['policy_hash'] == store.digest(policy)
+
+
+def test_iau_entry_and_roll_never_borrow_other_symbol(scenario, policy):
+    policy['scope'] = {'underlying': 'IAU'}
+    scenario['facts'].update(symbol='IAU', position_contracts=0, contracts=1,
+                             standard_contract=True, sizing_approved=True, open_interest=100,
+                             reentry_cooldown_clear=True)
+    assert evaluate(scenario, policy)['action'] == 'STO_CANDIDATE'
+    scenario['facts'].update(position_contracts=1, delta=.22)
+    scenario['replacement'] = {**scenario['facts'], 'symbol': 'QQQ', 'delta': .08,
+                              'strike_u': 115000000, 'expiry_date': '2026-10-23',
+                              'bid_u': 1000000, 'ask_u': 1050000,
+                              'opening_total_fees_u': 650000}
+    result = evaluate(scenario, policy)
+    assert result['action'] == 'WATCH'
+    assert result['checks']['roll_same_underlying'] is False
+    scenario['replacement']['symbol'] = 'IAU'
+    assert evaluate(scenario, policy)['action'] == 'ROLL_CANDIDATE'
+
+
+def test_iau_does_not_infer_no_dividend_without_evidence(scenario, policy):
+    policy['scope'] = {'underlying': 'IAU'}
+    scenario['facts'].update(symbol='IAU', dividend_window_clear=None)
+    assert evaluate(scenario, policy)['action'] == 'INSUFFICIENT_DATA'
+    scenario['facts']['delta'] = .32
+    assert evaluate(scenario, policy)['action'] == 'BTC_RISK'

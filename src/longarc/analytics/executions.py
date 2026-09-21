@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from longarc.core.symbols import canonical_symbol
 from longarc.storage import store
 from longarc.storage.holdings import contract, fields, integer, text, timestamp
 
@@ -64,8 +65,7 @@ def record_execution(path: Path, request: dict[str, Any]) -> dict[str, Any]:
     if e["action"] not in {"STO", "BTC", "EXPIRE", "ASSIGN"}:
         raise ValueError("Unsupported execution action")
     e["contract"] = contract(e["contract"])
-    if e["contract"]["symbol"] != "QQQ":
-        raise ValueError("This ledger supports QQQ calls only")
+    canonical_symbol(e["contract"]["symbol"])
     for key in ("policy_hash", "decision_record_id"):
         if e[key] is not None:
             text(e[key], key)
@@ -140,6 +140,12 @@ def record_execution(path: Path, request: dict[str, Any]) -> dict[str, Any]:
                 raise ValueError("Close precedes opening or previous close; import chronologically")
             if sum(x["quantity"] for x in previous) + e["quantity"] > opening["quantity"]:
                 raise ValueError("Close would exceed remaining opening quantity")
+        if any(
+            x["episode_id"] == e["episode_id"]
+            and x["contract"]["symbol"] != e["contract"]["symbol"]
+            for x in events
+        ):
+            raise ValueError("Episode ID already used for a different symbol in account/mode")
         db.execute(
             "INSERT INTO observations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -166,14 +172,37 @@ def record_execution(path: Path, request: dict[str, Any]) -> dict[str, Any]:
     return {"status": "created", "record_id": content_hash, "readback_verified": True}
 
 
-def performance(path: Path, account: str, mode: str) -> dict[str, Any]:
+def performance(
+    path: Path, account: str, mode: str, *, symbol: str | None = None
+) -> dict[str, Any]:
     """Return closed-option results and remaining quantities, never portfolio returns."""
     text(account, "account")
     if mode not in {"manual", "shadow"}:
         raise ValueError("mode must be manual or shadow")
+    if symbol is not None:
+        canonical_symbol(symbol)
     with store.connect(path, readonly=True) as db:
         store.check_schema(db)
         events = _events(db, account, mode)
+    if symbol is not None:
+        events = [e for e in events if e["contract"]["symbol"] == symbol]
+    report = _performance(events)
+    summary_fields = (
+        "execution_count",
+        "realized_gross_option_pnl_u",
+        "realized_net_option_pnl_u",
+        "fees_complete",
+        "realized_net_max_drawdown_u",
+    )
+    by_symbol = {}
+    for ticker in sorted({e["contract"]["symbol"] for e in events}):
+        subtotal = _performance([e for e in events if e["contract"]["symbol"] == ticker])
+        by_symbol[ticker] = {key: subtotal[key] for key in summary_fields}
+    return {"account": account, "mode": mode, "symbol": symbol, **report, "by_symbol": by_symbol}
+
+
+def _performance(events: list[dict[str, Any]]) -> dict[str, Any]:
+    """Calculate one scope's realized results in chronological execution order."""
     openings = {e["external_execution_id"]: e for e in events if e["action"] == "STO"}
     remaining = {key: e["quantity"] for key, e in openings.items()}
     allocated_totals = dict.fromkeys(openings, Decimal(0))
@@ -217,6 +246,7 @@ def performance(path: Path, account: str, mode: str) -> dict[str, Any]:
                 "external_execution_id": e["external_execution_id"],
                 "opening_execution_id": e["opening_execution_id"],
                 "episode_id": e["episode_id"],
+                "symbol": e["contract"]["symbol"],
                 "executed_at": e["executed_at"],
                 "action": e["action"],
                 "quantity": e["quantity"],
@@ -233,15 +263,19 @@ def performance(path: Path, account: str, mode: str) -> dict[str, Any]:
         )
         ep = episodes.setdefault(
             e["episode_id"],
-            {"gross": Decimal(0), "net": Decimal(0), "complete": True, "closed_quantity": 0},
+            {
+                "symbol": e["contract"]["symbol"],
+                "gross": Decimal(0),
+                "net": Decimal(0),
+                "complete": True,
+                "closed_quantity": 0,
+            },
         )
         ep["gross"] += gross
         ep["net"] += net if net is not None else 0
         ep["complete"] = ep["complete"] and net is not None
         ep["closed_quantity"] += e["quantity"]
     return {
-        "account": account,
-        "mode": mode,
         "execution_count": len(events),
         "realized_gross_option_pnl_u": str(gross_total),
         "realized_net_option_pnl_u": str(cumulative) if complete else None,
@@ -263,6 +297,7 @@ def performance(path: Path, account: str, mode: str) -> dict[str, Any]:
         "episodes": [
             {
                 "episode_id": key,
+                "symbol": ep["symbol"],
                 "closed_quantity": ep["closed_quantity"],
                 "policy_hashes": sorted(
                     {

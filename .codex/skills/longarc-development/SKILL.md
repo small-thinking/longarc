@@ -1,15 +1,15 @@
 ---
 name: longarc-development
-description: Use for LongArc repository changes or user-requested Schwab read-only QQQ analysis. Routes analysis to the local context and runbook; enforces reviewable repository changes.
+description: Use for LongArc repository changes or user-requested Schwab read-only covered-call analysis, including QQQ and IAU. Routes analysis to the local context and runbook; enforces reviewable repository changes.
 ---
 
 # LongArc Development Skill
 
 Choose the mode matching the user's request. Read-only analysis does not require code changes, Git publishing, or a new skill.
 
-## Read-only QQQ analysis
+## Read-only covered-call analysis
 
-For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). Paths are relative to the repository root unless linked otherwise. Use available browser tools for current page state and existing calculation tools for arithmetic. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
+For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). For QQQ, IAU or a combined review, resolve each exact symbol and its own policy from that context, then reuse the [same procedure](../../../docs/schwab-readonly.md#multiple-symbol-reviews). Pass the symbol explicitly to capture/history/research and match policy `scope.underlying` to decision/replay inputs. Old unscoped policies belong only to QQQ; do not infer IAU thresholds from a discussion of candidates. Coverage, episodes and results stay separate by asset; shared account cash is reconciled once. Paths are relative to the repository root unless linked otherwise. Use available browser tools for current page state and existing calculation tools for arithmetic. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
 
 ## Consolidation
 

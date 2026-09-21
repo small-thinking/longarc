@@ -131,3 +131,18 @@ def test_compare_single_pair_uncertainty_and_conflict_rejection():
         compare_replays([left, dict(left, net_option_pnl_u=200)], "a" * 64, "c" * 64)
     with pytest.raises(ValueError, match="distinct"):
         compare_replays([left], "a" * 64, "a" * 64)
+
+
+def test_symbols_are_not_pooled_or_paired_even_with_identical_policy_hashes():
+    from longarc.analytics.estimates import compare_replays
+
+    qqq = episode(pnl=100)
+    iau = dict(qqq, symbol='IAU', net_option_pnl_u=-50)
+    report = summarize_replays([qqq, iau])
+    assert report['unique_episodes'] == 2
+    assert {g['symbol']: g['closed_episode_mean_pnl_u'] for g in report['groups']} == {
+        'QQQ': 100, 'IAU': -50}
+    other_policy_iau = dict(iau, policy_hash='c' * 64)
+    comparison = compare_replays([qqq, other_policy_iau], 'a' * 64, 'c' * 64)
+    assert all(g['counts']['matched_closed'] == 0 for g in comparison['groups'])
+    assert sum(g['counts']['unmatched'] for g in comparison['groups']) == 2

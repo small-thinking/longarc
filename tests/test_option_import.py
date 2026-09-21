@@ -18,13 +18,17 @@ def legacy():
                                   "-.02", "5", "200", "20%", ".01", ".1", "1", "1", ""]]}]}
 
 
-def save(db, raw, *, tenor=False, mode="observe"):
+def save(db, raw, *, tenor=False, mode="observe", scope=None, symbol=None):
     payload = {"idempotency_key": store.digest(raw), "scope": "research:QQQ:tenor14-vs28"
                if tenor else "account:Example:QQQ", "mode": mode, "kind": "observation",
                "observed_at": raw["captured_at"], "source": "manual_browser",
                "quality": "synthetic" if mode == "shadow" else "unverified",
                "code_version": "manual-tenor-comparison-v1" if tenor else "manual-evidence-v1",
                "inputs": {"raw" if tenor else "quotes": raw}, "results": {}, "evidence_ids": []}
+    if scope is not None:
+        payload["scope"] = scope
+    if symbol is not None:
+        payload["inputs"]["symbol"] = symbol
     return store.save_observation(db, payload)["record_id"]
 
 
@@ -101,3 +105,75 @@ def test_explicit_source_closed_session_is_preserved(tmp_path: Path):
         "closed_session"] == "2026-09-18"
     with pytest.raises(ValueError, match="conflicts"):
         ingest_observation(db, source_id, closed_session="2026-09-17")
+
+
+@pytest.mark.parametrize("symbol", ["IAU", "SPY"])
+def test_explicit_symbol_selected_rows_import_with_provenance(tmp_path, symbol):
+    db = tmp_path / "selected.sqlite3"
+    store.initialize(db)
+    raw = legacy()
+    raw.update(format="manual-schwab-selected-rows-v2", symbol=symbol)
+    record_id = save(db, raw, scope=f"account:Example:{symbol}", symbol=symbol)
+    result = ingest_observation(db, record_id)
+    payload = store.get_observation(db, result["record_id"])["payload"]
+    assert payload["scope"] == f"options:{symbol}"
+    assert payload["inputs"]["symbol"] == symbol
+    assert payload["results"]["quotes"][0]["contract"]["symbol"] == symbol
+    assert payload["inputs"]["raw_capture"]["original_capture"] == raw
+    assert payload["evidence_ids"] == [record_id]
+
+
+@pytest.mark.parametrize("symbol", [None, "iau", "IAU/QQQ", "", 123])
+def test_new_selected_rows_require_valid_symbol(symbol):
+    raw = legacy()
+    raw.update(format="manual-schwab-selected-rows-v2", symbol=symbol)
+    with pytest.raises(ValueError):
+        selected_capture(raw)
+
+
+@pytest.mark.parametrize("tenor", [False, True])
+def test_legacy_formats_cannot_be_relabeled(tenor):
+    raw = legacy() if not tenor else {"rows": [], "captured_at": "2026-09-20T20:00:00Z"}
+    raw["symbol"] = "IAU"
+    with pytest.raises(ValueError, match="QQQ"):
+        selected_capture(raw, tenor=tenor)
+
+
+@pytest.mark.parametrize("scope,declared", [("account:Example:QQQ", "IAU"),
+                                          ("account:Example:IAU", "QQQ")])
+def test_new_selected_rows_reject_conflicting_scope_or_input_symbol(tmp_path, scope, declared):
+    db = tmp_path / "conflict.sqlite3"
+    store.initialize(db)
+    raw = legacy()
+    raw.update(format="manual-schwab-selected-rows-v2", symbol="IAU")
+    record_id = save(db, raw, scope=scope, symbol=declared)
+    with pytest.raises(ValueError, match="conflicts"):
+        ingest_observation(db, record_id)
+
+
+def test_legacy_iau_observation_is_unsupported_even_without_raw_symbol(tmp_path):
+    db = tmp_path / "legacy.sqlite3"
+    store.initialize(db)
+    record_id = save(db, legacy(), scope="account:Example:IAU")
+    with pytest.raises(ValueError, match="scope"):
+        ingest_observation(db, record_id)
+
+
+@pytest.mark.parametrize("field,value", [("symbol", "QQQ"), ("symbol", "iau"),
+                                        ("symbol", None), ("option_type", "PUT"),
+                                        ("option_type", None)])
+def test_selected_rows_reject_conflicting_or_invalid_table_identity(field, value):
+    raw = legacy()
+    raw.update(format="manual-schwab-selected-rows-v2", symbol="IAU")
+    raw["tables"][0][field] = value
+    with pytest.raises(ValueError):
+        selected_capture(raw)
+
+
+def test_selected_rows_accept_matching_explicit_table_identity():
+    raw = legacy()
+    raw.update(format="manual-schwab-selected-rows-v2", symbol="IAU")
+    raw["tables"][0].update(symbol="IAU", option_type="CALL")
+    quote = normalize_capture(selected_capture(raw))["quotes"][0]
+    assert quote["contract"]["symbol"] == "IAU"
+    assert quote["contract"]["option_type"] == "CALL"

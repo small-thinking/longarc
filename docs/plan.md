@@ -1,10 +1,14 @@
 # LongArc — current investment scope
 
-The sole active investment direction is the migrated QQQ covered-call plan: infrequent manual trades, frequent observation and deterministic calculations, and complete records.
+The active investment scope is covered calls on QQQ and IAU with separate per-symbol policies: infrequent manual trades, frequent observation and deterministic calculations, and complete records.
 
 The current local source of truth is `private/qqq-covered-call-plan/README.md`, with the consolidated strategy and iteration plan in `PLAN.md` beside it. These personal planning files are intentionally excluded from Git; a fresh clone does not include them. Do not substitute the retired roadmap if they are unavailable.
 
-The earlier SMA/momentum, multi-strategy, multi-asset, and automated-execution roadmap is retired. It is recoverable in Git history and the local archive outside this project, not an active implementation backlog.
+The earlier SMA/momentum, multi-strategy and automated-execution roadmap is retired. Supporting more stock/ETF underlyings in the covered-call workflow does not revive that roadmap. It is recoverable in Git history and the local archive outside this project, not an active implementation backlog.
+
+## Multiple-underlying extension
+
+The existing capture, decision, execution and replay layers now carry explicit underlying symbols. QQQ and IAU share code and storage; policy identity, evidence, coverage and results stay separate. No schema migration or automatic adoption of new trading parameters is needed. Other stock/ETF CALL underlyings use the same interfaces only after their contract/source/policy requirements are established.
 
 ## Next work
 

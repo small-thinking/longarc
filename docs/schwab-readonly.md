@@ -4,6 +4,34 @@ Read `private/qqq-covered-call-plan/README.md` first for the user's current pref
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
 
+## Multiple-symbol reviews
+
+Use the same procedure for QQQ, IAU or an explicitly requested stock/ETF CALL
+underlying. Resolve the exact symbol and its policy path from the private context;
+do not copy QQQ thresholds to another asset implicitly. For a combined review,
+read the account once, then evaluate each symbol with separate shares, option
+obligations, pending-order coverage and policy hashes. Reconcile any proposed
+buyback cash across the whole account before discussing combined sizing.
+
+Pass `{symbol: "IAU", ...}` to `collectSchwabChain` on the observed IAU Options
+research page. The bridge checks the exact symbol route before interacting; all
+canonical inputs, decisions and research scopes retain that ticker. For selected
+rows use `manual-schwab-selected-rows-v2` with explicit `symbol`. Do not rename old
+unknown-layout evidence into a supported format without checking its field mapping,
+preserving source IDs, original times and missing values.
+
+Use `--symbol IAU` for history and estimate reports; their backwards-compatible
+default is QQQ. Decision and replay requests identify their own symbol and require
+matching `scope.underlying` in the supplied policy. Record confirmed executions
+with exact `contract.symbol` and a distinct episode per asset. Performance can
+report each asset and account totals without combining stock gains/losses with
+option P&L. Realized-only output does not measure open-option risk or expected income.
+
+IAU having no regular distribution is not a hardcoded calendar exemption: verify
+current product/event facts before setting `dividend_window_clear`. Report unknown
+fees, source times or contract terms as unknown. A newly supported ticker does not
+itself authorize a policy change, a trade, or a scheduled review.
+
 ## Before reading
 
 1. Confirm the current checkout exposes the required CLI. The calculation implementation was merged in PR #14. An older checkout may still lack it. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
@@ -12,7 +40,7 @@ The existing [longarc-development skill](../.codex/skills/longarc-development/SK
 
 ## Read account facts first
 
-Use visible Positions and Orders views for the intended account. Record an account alias locally, not account numbers in reports or commits. Read QQQ shares, all QQQ option legs, contract identities and signed quantities, and relevant open/partial/pending orders. Check visible timestamps, filters and pagination; a filtered or collapsed list is not proof that no calls/orders exist. Read cash relevant to potential buybacks; buying power is not automatically cash or an approved spending budget.
+Use visible Positions and Orders views for the intended account. Record an account alias locally, not account numbers in reports or commits. Read the selected underlying shares and all of its option legs, contract identities and signed quantities, and relevant open/partial/pending orders. Check visible timestamps, filters and pagination; a filtered or collapsed list is not proof that no calls/orders exist. Read cash relevant to potential buybacks; buying power is not automatically cash or an approved spending budget.
 
 Classify only after the view is complete:
 

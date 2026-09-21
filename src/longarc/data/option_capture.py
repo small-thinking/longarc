@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from longarc.analytics.metrics import calculate
+from longarc.core.symbols import canonical_symbol
 from longarc.storage import holdings, store
 
 FORMAT = "schwab-browser-chain-v1"
@@ -73,12 +74,22 @@ def normalize_capture(raw: dict[str, Any]) -> dict[str, Any]:
     stays null. Completeness means requested watchlist coverage, never all listed
     contracts. Unknown/adjusted deliverables must not be used for sizing.
     """
-    if raw.get("format") != FORMAT or raw.get("symbol") != "QQQ":
-        raise ValueError("Expected QQQ schwab-browser-chain-v1 capture")
+    if raw.get("format") != FORMAT:
+        raise ValueError("Expected schwab-browser-chain-v1 capture")
+    symbol = canonical_symbol(raw.get("symbol"))
+    if raw.get("option_type", "CALL") != "CALL":
+        raise ValueError("Only CALL captures are supported")
     captured = holdings.timestamp(raw["captured_at"])
     requested = raw.get("requested", {})
     if not isinstance(requested, dict) or not isinstance(raw.get("slices"), list):
         raise ValueError("requested object and slices array required")
+    for item in [*requested.get("contracts", []), *raw["slices"]]:
+        if not isinstance(item, dict):
+            continue
+        if "symbol" in item and canonical_symbol(item["symbol"]) != symbol:
+            raise ValueError("Capture symbol conflicts with requested contract or slice")
+        if item.get("option_type", "CALL") != "CALL":
+            raise ValueError("Only CALL captures are supported")
     warnings: list[str] = ["capture_time_analysis_clock", "full_listed_chain_not_verified"]
     if raw.get("selection") == "selected_rows_only":
         warnings.append("selected_rows_only")
@@ -153,7 +164,7 @@ def normalize_capture(raw: dict[str, Any]) -> dict[str, Any]:
                                                         "underlying_price_u")
             except ValueError:
                 row_warnings.append("invalid_underlying_price")
-            contract = {"symbol": "QQQ", "option_type": "CALL", "expiry_date": expiry,
+            contract = {"symbol": symbol, "option_type": "CALL", "expiry_date": expiry,
                         "strike_u": strike, "multiplier": None}
             result = calculate(contract, snapshot, captured)
             row_warnings.extend(result["warnings"])
@@ -215,6 +226,7 @@ def ingest_capture(path: Path, raw: dict[str, Any], *, mode: str = "observe",
     if mode not in ("observe", "shadow"):
         raise ValueError("Capture mode must be observe or shadow")
     result = normalize_capture(raw)
+    symbol = canonical_symbol(raw["symbol"])
     captured = holdings.timestamp(raw["captured_at"])
     key = "option-capture:" + store.digest({"mode": mode, "capture": raw})
     if closed_session is not None:
@@ -227,12 +239,12 @@ def ingest_capture(path: Path, raw: dict[str, Any], *, mode: str = "observe",
         })
     event = {
         "idempotency_key": key,
-        "scope": "options:QQQ", "mode": mode,
+        "scope": f"options:{symbol}", "mode": mode,
         "kind": "observation" if result["quotes"] else "error",
         "observed_at": captured, "source": "schwab_visible_browser",
         "quality": "synthetic" if mode == "shadow" else "unverified",
         "code_version": "capture-v1:" + hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        "inputs": {"format": "option-chain-v1", "symbol": "QQQ",
+        "inputs": {"format": "option-chain-v1", "symbol": symbol,
                    "requested": raw.get("requested", {}), "raw_capture": raw},
         "results": result, "evidence_ids": raw.get("evidence_ids", []),
         "policy_hash": None,

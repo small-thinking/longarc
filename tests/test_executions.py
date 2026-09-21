@@ -1,9 +1,11 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from longarc.analytics.executions import performance, record_execution
+from longarc.cli import main
 from longarc.storage.store import initialize
 
 
@@ -54,6 +56,26 @@ def test_partial_close_and_fee_allocation(db):
     assert report["realized_net_option_pnl_u"] == "98700000"
     assert report["open_lots"][0]["remaining_quantity"] == 1
     assert performance(db, "test", "manual")["execution_count"] == 0
+
+
+def test_cli_records_and_filters_two_symbols(db, tmp_path, capsys):
+    for symbol in ("QQQ", "IAU"):
+        payload = event(symbol, episode_id=symbol)
+        payload["contract"]["symbol"] = symbol
+        file = tmp_path / f"{symbol}.json"
+        file.write_text(json.dumps(payload))
+        assert main(["options", "execution-add", "--db", str(db), "--file", str(file)]) == 0
+        capsys.readouterr()
+    args = ["options", "performance", "--db", str(db), "--account", "test",
+            "--mode", "shadow"]
+    assert main(args) == 0
+    aggregate = json.loads(capsys.readouterr().out)
+    assert aggregate["execution_count"] == 2
+    assert set(aggregate["by_symbol"]) == {"QQQ", "IAU"}
+    assert main(args + ["--symbol", "IAU"]) == 0
+    filtered = json.loads(capsys.readouterr().out)
+    assert filtered["execution_count"] == 1
+    assert filtered["open_lots"][0]["contract"]["symbol"] == "IAU"
 
 
 def test_roll_is_two_legs_and_episode_closed_pnl(db):
@@ -167,3 +189,138 @@ def test_execution_and_performance_cli(db, tmp_path, capsys):
     report = json.loads(capsys.readouterr().out)
     assert report["open_lots"][0]["remaining_quantity"] == 2
     assert report["realized_net_option_pnl_u"] == "0"
+
+
+def symbol_event(symbol, key, action="STO", **updates):
+    result = event(key, action, episode_id=f"{symbol}-episode", **updates)
+    result["contract"]["symbol"] = symbol
+    return result
+
+
+def test_mixed_symbols_partial_roll_assignment_and_expiration(db):
+    events = [
+        symbol_event("QQQ", "qqq-open"),
+        symbol_event("QQQ", "qqq-close", "BTC", opening_execution_id="qqq-open"),
+        symbol_event(
+            "QQQ", "qqq-roll", quantity=1, fees_u=650000,
+            executed_at="2026-09-21T20:01:00Z",
+        ),
+        symbol_event("IAU", "iau-open", quantity=1, price_u=3000000, fees_u=650000),
+        symbol_event(
+            "IAU", "iau-assign", "ASSIGN", opening_execution_id="iau-open",
+            price_u=0, fees_u=0, executed_at="2026-09-22T20:00:00Z",
+        ),
+        symbol_event("BRK.B", "brk-open", quantity=1, price_u=4000000, fees_u=0),
+        symbol_event(
+            "BRK.B", "brk-expire", "EXPIRE", opening_execution_id="brk-open",
+            price_u=0, fees_u=0, executed_at="2026-10-17T00:01:00Z",
+        ),
+    ]
+    for execution in events:
+        created = record_execution(db, execution)
+        replayed = record_execution(db, execution)
+        assert replayed["status"] == "existing"
+        assert replayed["record_id"] == created["record_id"]
+    report = performance(db, "test", "shadow")
+    assert report["symbol"] is None
+    assert report["execution_count"] == 7
+    assert report["realized_gross_option_pnl_u"] == "800000000"
+    assert report["realized_net_option_pnl_u"] == "798050000"
+    assert {
+        key: value["realized_net_option_pnl_u"] for key, value in report["by_symbol"].items()
+    } == {
+        "QQQ": "98700000", "IAU": "299350000", "BRK.B": "400000000",
+    }
+    assert {e["symbol"] for e in report["closed_events"]} == {"QQQ", "IAU", "BRK.B"}
+    assert {e["symbol"] for e in report["episodes"]} == {"QQQ", "IAU", "BRK.B"}
+    assigned = next(e for e in report["closed_events"] if e["symbol"] == "IAU")
+    assert assigned["stock_pnl_unknown"]
+    assert [
+        (lot["opening_execution_id"], lot["remaining_quantity"]) for lot in report["open_lots"]
+    ] == [
+        ("qqq-open", 1), ("qqq-roll", 1),
+    ]
+    qqq = performance(db, "test", "shadow", symbol="QQQ")
+    assert qqq["symbol"] == "QQQ"
+    assert qqq["execution_count"] == 3
+    assert qqq["realized_net_option_pnl_u"] == "98700000"
+    assert set(qqq["by_symbol"]) == {"QQQ"}
+    assert all(e["symbol"] == "QQQ" for e in qqq["closed_events"] + qqq["episodes"])
+    assert performance(db, "test", "shadow", symbol="SPY")["execution_count"] == 0
+
+
+def test_unknown_fees_only_affect_own_symbol_and_aggregate(db):
+    record_execution(db, symbol_event("QQQ", "qqq-open", quantity=1, fees_u=0))
+    record_execution(db, symbol_event("IAU", "iau-open", quantity=1, fees_u=None))
+    record_execution(db, symbol_event(
+        "IAU", "iau-close", "BTC", opening_execution_id="iau-open", fees_u=0,
+    ))
+    record_execution(db, symbol_event(
+        "QQQ", "qqq-close", "BTC", opening_execution_id="qqq-open", price_u=3000000,
+        fees_u=0, executed_at="2026-09-22T20:00:00Z",
+    ))
+    report = performance(db, "test", "shadow")
+    assert report["realized_gross_option_pnl_u"] == "0"
+    assert report["realized_net_option_pnl_u"] is None
+    assert report["realized_net_max_drawdown_u"] is None
+    assert not report["fees_complete"]
+    assert report["by_symbol"]["IAU"]["realized_net_option_pnl_u"] is None
+    assert not report["by_symbol"]["IAU"]["fees_complete"]
+    assert report["by_symbol"]["QQQ"]["fees_complete"]
+    assert report["by_symbol"]["QQQ"]["realized_net_option_pnl_u"] == "-100000000"
+    assert report["by_symbol"]["QQQ"]["realized_net_max_drawdown_u"] == "100000000"
+    filtered = performance(db, "test", "shadow", symbol="QQQ")
+    assert filtered["closed_events"][0]["cumulative_net_option_pnl_u"] == "-100000000"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("symbol", "IAU"), ("expiry_date", "2026-11-20"),
+    ("strike_u", 780000000), ("multiplier", 10),
+])
+def test_close_requires_full_contract_identity(db, field, value):
+    record_execution(db, event())
+    closing = event("bad-close", "BTC")
+    closing["contract"][field] = value
+    with pytest.raises(ValueError, match="Closing contract differs"):
+        record_execution(db, closing)
+    assert performance(db, "test", "shadow")["execution_count"] == 1
+
+
+def test_episode_and_execution_ids_cannot_mix_symbols(db):
+    record_execution(db, event())
+    iau = event("iau-open")
+    iau["contract"]["symbol"] = "IAU"
+    with pytest.raises(ValueError, match="Episode ID already used for a different symbol"):
+        record_execution(db, iau)
+    with pytest.raises(ValueError, match="Execution ID already used with different content"):
+        record_execution(db, iau | {"external_execution_id": "open", "episode_id": "iau"})
+    # Account and mode are independent namespaces for episodes and broker IDs.
+    assert record_execution(db, iau | {"account": "another"})["status"] == "created"
+    assert record_execution(db, iau | {"mode": "manual"})["status"] == "created"
+    assert performance(db, "test", "shadow")["execution_count"] == 1
+
+
+@pytest.mark.parametrize("symbol", ["iau", " IAU", "IAU ", "I AU", "💰", "A" * 16])
+def test_execution_and_performance_reject_noncanonical_symbols(db, symbol):
+    with pytest.raises(ValueError):
+        record_execution(db, symbol_event(symbol, "bad"))
+    with pytest.raises(ValueError):
+        performance(db, "test", "shadow", symbol=symbol)
+
+
+def test_ledger_still_rejects_put_contracts(db):
+    put = symbol_event("IAU", "bad-put")
+    put["contract"]["option_type"] = "PUT"
+    with pytest.raises(ValueError, match="CALL"):
+        record_execution(db, put)
+
+
+def test_existing_qqq_record_identity_is_unchanged(db):
+    # Captured from the QQQ-only v1 ledger for this exact fixture. Existing rows
+    # and imported broker IDs must remain replayable without a migration.
+    legacy_record_id = "202346c471228b1f660101b84b70b389bee568495fec8ae37ce847b5c8b9a582"
+    created = record_execution(db, event())
+    assert created["record_id"] == legacy_record_id
+    assert record_execution(db, event()) == {
+        "status": "existing", "record_id": legacy_record_id, "readback_verified": True,
+    }

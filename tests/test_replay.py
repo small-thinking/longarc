@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import copy
+import json
 
 import pytest
 
 from longarc.analytics import decisions
 from longarc.analytics.replay import replay, replay_and_log
+from longarc.cli import main
 from longarc.data.option_capture import ingest_capture
 from longarc.storage import store
 
@@ -33,7 +35,7 @@ def setup(tmp_path):
 
 
 def frame(db, day, *, bid="1", ask="1.05", delta=".08", replacement=False,
-          closed=False, stamp=True):
+          closed=False, stamp=True, symbol="QQQ"):
     time = f"2026-09-{day:02}T19:00:00Z"
     headers = ["Strike", "Bid", "Ask", "Delta", "Open Interest"]
     slices = [{"expiry_date": "2026-10-16", "headers": headers,
@@ -44,7 +46,7 @@ def frame(db, day, *, bid="1", ask="1.05", delta=".08", replacement=False,
     for s in slices:
         s.update(underlying_price="100", underlying_at=time if stamp else None,
                  quote_at=time if stamp else None, greeks_at=time if stamp else None)
-    raw = {"format": "schwab-browser-chain-v1", "symbol": "QQQ",
+    raw = {"format": "schwab-browser-chain-v1", "symbol": symbol,
            "captured_at": time, "slices": slices}
     result = ingest_capture(db, raw, mode="shadow",
                             closed_session="2026-09-18" if closed else None)
@@ -52,6 +54,30 @@ def frame(db, day, *, bid="1", ask="1.05", delta=".08", replacement=False,
                            "greeks_usable", "underlying_usable", "standard_contract",
                            "reentry_cooldown_clear"], True)
     return {"record_id": result["record_id"], "checks": checks}
+
+
+def test_cli_replay_estimate_and_history_select_iau(setup, tmp_path, capsys):
+    db, request, policy, fees = setup
+    request["contract"]["symbol"] = "IAU"
+    policy["scope"] = {"underlying": "IAU"}
+    request["observations"] = [frame(db, 21, symbol="IAU"),
+                               frame(db, 22, symbol="IAU", bid=".35", ask=".4")]
+    frame(db, 21, symbol="QQQ")
+    paths = {}
+    for name, payload in (("request", request), ("policy", policy), ("fees", fees)):
+        paths[name] = str(tmp_path / f"{name}.json")
+        (tmp_path / f"{name}.json").write_text(json.dumps(payload))
+    assert main(["options", "replay", "--db", str(db), "--file", paths["request"],
+                 "--policy", paths["policy"], "--fees", paths["fees"]]) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "closed"
+    assert main(["options", "estimate", "--db", str(db), "--symbol", "IAU"]) == 0
+    assert json.loads(capsys.readouterr().out)["symbol"] == "IAU"
+    assert main(["options", "history", "--db", str(db), "--symbol", "IAU",
+                 "--mode", "shadow", "--start", "2026-09-21", "--end", "2026-09-22"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert len(report["series"]) == 1
+    assert len(report["series"][0]["points"]) == 2
+    assert report["series"][0]["contract"]["symbol"] == "IAU"
 
 
 def test_replay_calls_shared_policy_and_logs_idempotently(setup, monkeypatch):
@@ -96,7 +122,7 @@ def test_roll_keeps_new_obligation_open_and_charges_both_legs(setup):
     result = replay(db, r, p, fees)
     assert result["status"] == "open" and result["net_option_pnl_u"] is None
     assert result["realized_closed_legs_pnl_u"] == -101300000
-    assert result["watch_contracts"] == [roll_frame["replacement"]]
+    assert result["watch_contracts"] == [{"symbol": "QQQ", **roll_frame["replacement"]}]
     # Replacement finishes on a later frame; all prices still come from canonical evidence.
     later = frame(db, 23, replacement=True)
     payload = store.get_observation(db, later["record_id"])["payload"]["inputs"]["raw_capture"]
@@ -238,3 +264,49 @@ def test_profit_fill_requires_positive_net_after_known_slippage(setup):
     r["observations"][1] = frame(db, 22, bid=".35", ask=".4", delta=".35")
     result = replay(db, r, p, fees)
     assert result["status"] == "closed" and result["net_option_pnl_u"] < 0
+
+
+@pytest.mark.parametrize('symbol', ['IAU', 'SPY'])
+def test_scoped_replay_and_history_are_isolated(setup, symbol):
+    from longarc.analytics.research import estimate_history, render_estimate
+
+    db, r, p, fees = setup
+    r['contract']['symbol'] = symbol
+    p['scope'] = {'underlying': symbol}
+    r['observations'] = [frame(db, 21, symbol=symbol),
+                         frame(db, 22, symbol=symbol, bid='.35', ask='.4')]
+    result = replay_and_log(db, r, p, fees)
+    assert result['status'] == 'closed'
+    assert result['symbol'] == symbol
+    assert result['net_option_pnl_u'] == 58700000
+    assert store.get_observation(db, result['record_id'])['scope'] == f'options:{symbol}:replays'
+    report = estimate_history(db, symbol=symbol)
+    assert report['unique_episodes'] == 1
+    assert report['groups'][0]['symbol'] == symbol
+    assert render_estimate(report).startswith(f'# {symbol} ')
+    assert estimate_history(db)['unique_episodes'] == 0
+    assert replay_and_log(db, r, p, fees)['write_status'] == 'existing'
+
+
+def test_iau_replay_rejects_other_asset_policy_evidence_and_roll(setup):
+    db, r, p, fees = setup
+    r['contract']['symbol'] = 'IAU'
+    r['observations'] = [frame(db, 21, symbol='IAU')]
+    with pytest.raises(ValueError, match='Policy underlying'):
+        replay(db, r, p, fees)
+    p['scope'] = {'underlying': 'IAU'}
+    other = frame(db, 22, symbol='QQQ', bid='.35', ask='.4')
+    r['observations'].append(other)
+    with pytest.raises(ValueError, match='same symbol'):
+        replay(db, r, p, fees)
+    roll_frame = frame(db, 22, symbol='IAU', bid='1.95', ask='2', delta='.22', replacement=True)
+    roll_frame.update(replacement={'symbol': 'QQQ', 'expiry_date': '2026-10-23',
+                                  'strike_u': 115000000}, replacement_checks=roll_frame['checks'])
+    r['observations'][-1] = roll_frame
+    with pytest.raises(ValueError, match='same underlying'):
+        replay(db, r, p, fees)
+    roll_frame['replacement']['symbol'] = 'IAU'
+    result = replay(db, r, p, fees)
+    assert result['status'] == 'open'
+    assert result['watch_contracts'][0]['symbol'] == 'IAU'
+    assert result['legs'][0]['action'] == 'ROLL_CANDIDATE'

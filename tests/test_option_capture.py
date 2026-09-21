@@ -147,3 +147,52 @@ def test_concurrent_closed_reads_share_one_record(tmp_path):
             lambda raw: ingest_capture(db, raw, closed_session="2026-09-18"), captures))
     assert results[0]["record_id"] == results[1]["record_id"]
     assert len(store.list_observations(db, "options:QQQ")) == 1
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_symbols_have_separate_contracts_scopes_and_dedup_keys(tmp_path, closed):
+    db = tmp_path / "symbols.sqlite3"
+    store.initialize(db)
+    ids = set()
+    kwargs = {"closed_session": "2026-09-18"} if closed else {}
+    for symbol in ("QQQ", "IAU", "SPY"):
+        raw = capture()
+        raw["symbol"] = symbol
+        saved = ingest_capture(db, raw, **kwargs)
+        assert ingest_capture(db, raw, **kwargs)["record_id"] == saved["record_id"]
+        ids.add(saved["record_id"])
+        payload = store.get_observation(db, saved["record_id"])["payload"]
+        assert payload["scope"] == f"options:{symbol}"
+        assert payload["inputs"]["symbol"] == symbol
+        assert payload["results"]["quotes"][0]["contract"]["symbol"] == symbol
+        assert len(store.list_observations(db, f"options:{symbol}")) == 1
+    assert len(ids) == 3
+
+
+@pytest.mark.parametrize("symbol", [None, "", "iau", " IAU", "IAU/QQQ", "IAU:QQQ", 123,
+                                     "A" * 16, "1ABC"])
+def test_canonical_capture_requires_valid_explicit_symbol(symbol):
+    raw = capture()
+    raw["symbol"] = symbol
+    with pytest.raises(ValueError):
+        normalize_capture(raw)
+    raw.pop("symbol")
+    with pytest.raises(ValueError):
+        normalize_capture(raw)
+
+
+@pytest.mark.parametrize("field", ["symbol", "option_type"])
+@pytest.mark.parametrize("location", ["contract", "slice"])
+def test_conflicting_contract_or_slice_identity_is_rejected(field, location):
+    raw = capture()
+    target = raw["requested"]["contracts"][0] if location == "contract" else raw["slices"][0]
+    target[field] = "IAU" if field == "symbol" else "PUT"
+    with pytest.raises(ValueError):
+        normalize_capture(raw)
+
+
+def test_capture_does_not_relabel_put_as_call():
+    raw = capture()
+    raw["option_type"] = "PUT"
+    with pytest.raises(ValueError, match="CALL"):
+        normalize_capture(raw)
