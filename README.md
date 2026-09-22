@@ -32,6 +32,18 @@ account totals plus `by_symbol`; `--symbol IAU` limits results to IAU. Reports s
 realized option P&L and remaining recorded contracts, not stock P&L or invented
 open-option marks. See [symbol contracts and compatibility](docs/calculations.md#symbol-scope-and-compatibility).
 
+## Read-only analysis reports
+
+`options data-audit` inventories records, quote coverage, missing fields and
+replay-data blockers. `options compare-candidates` compares one saved quote batch
+against explicit policy thresholds and fee assumptions. `options position-report`
+joins recorded open lots to quote histories, separates realized P&L from conditional
+ask-close scenarios, and exposes stale or missing evidence. Realized totals are
+recorded all-time subtotals, not reconciled account income. All three export JSON
+and Markdown without changing the database. See [analysis reports](docs/analysis-reports.md)
+for commands, selection rules, units and limits. These are on-demand reports, not
+automatic candidate selection or validated return forecasts.
+
 ## Holding tracking
 
 Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). The original holding tables remain provisional. The separate execution journal matches recorded closes to openings and reports remaining recorded quantities; it still requires fresh broker reconciliation.

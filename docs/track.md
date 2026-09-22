@@ -10,11 +10,35 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-21 — Repeatable data audit, candidate and position reports
+
+- Added three read-only CLI reports: data inventory/quality, same-batch candidate
+  comparisons, and recorded open-lot tracking. JSON retains provenance and exact
+  monetary units; Markdown presents totals, comparison rows and limitations.
+- Audit separates physical/current records, quote identities and actual execution
+  events; missing fields, expected-session gaps and replay blockers are explicit.
+  Candidate checks reuse policy screening without entry approval. Position reports
+  reuse fill accounting, preserve partial-close fee residuals, isolate providers and
+  modes, and separate realized results from conditional ask-close scenarios.
+  Markdown labels realized totals as recorded all-time subtotals with account
+  completeness unknown, including when the ledger is empty.
+- No schema change: no added/changed/dropped tables, columns, types, constraints,
+  keys or indexes; no migration, dependency addition or rewrite of existing records.
+  No new schedule, broker write, strategy threshold or income forecast.
+- Validation: 317 Python tests, 9 Node bridge tests, Ruff, mypy and governance checks
+  passed. Real local database smoke generated audit, both symbol comparisons and
+  a position report; the database logical-content hash stayed unchanged. Reports
+  remain private. PR [#23](https://github.com/small-thinking/longarc/pull/23) open;
+  not merged.
+- Remaining: source-clock completeness, research-path orchestration, calendar-period
+  returns and broker reconciliation. Unknown costs remain unknown; conditional
+  matching of unknown quote multipliers is explicitly disclosed.
+
 ### 2026-09-21 — Consistent covered-call candidate reports
 
 - The skill routes every QQQ/IAU candidate report to a required field contract: spot/source timing, signed dollar/percent strike distance, bid/ask, Delta, premium, and provider Probability of Touch / Probability of OTM. Missing probabilities stay unknown and are not replaced by Delta or described as strategy win rates.
 - Candidate preference, current action and missing entry requirements are reported separately. This is documentation guidance only; no collector, strategy threshold, schema, dependency or execution change.
-- Validation: documentation diff, governance and skill validation pass. PR [#22](https://github.com/small-thinking/longarc/pull/22) open; not merged. Next: apply these fields to fresh observations while retaining source limitations.
+- Validation: documentation diff, governance and skill validation pass. PR [#22](https://github.com/small-thinking/longarc/pull/22) merged. Next: apply these fields to fresh observations while retaining source limitations.
 
 ### 2026-09-21 — Shared multi-symbol covered-call workflow
 
@@ -145,3 +169,5 @@ Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlie
 - Integration validation after refinement: independent merge-tree checks with report-fields
   (#22) and analysis-reports (#23) passed without conflicts; the combined #23/#24
   tree passed 322 Python tests and 9 browser-bridge tests. No actual merge performed.
+
+- PR cleanup: #22 and #24 merged after scoped review; #23 retains additive report commands. Final integrated checks run before merging #23.
