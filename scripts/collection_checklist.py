@@ -9,11 +9,7 @@ REQUIRED = (
     "session_calendar", "positions", "orders", "buyback_funds", "execution_reconciliation",
     "expiry_inventory", "held_and_watch_contracts", "four_week_candidates", "two_week_candidates",
     "underlying_quote", "quote_times", "greek_times", "delay_disclosure", "contract_terms",
-    "dividend_events", "fees",
-)
-QUOTE_FIELDS = (
-    "bid", "ask", "last", "delta", "theta", "gamma", "vega", "iv",
-    "volume", "open_interest", "bid_size", "ask_size", "probability_touch", "probability_otm",
+    "dividend_events", "fees", "quote_field_review",
 )
 STATUSES = {"observed", "not_provided", "blocked", "not_applicable", "not_attempted"}
 
@@ -25,11 +21,12 @@ def template(symbol: str) -> dict:
         "items": {key: {"status": "not_attempted", "reason": None, "source_ref": None,
                         "checked_at": None, "evidence_ref": None}
                   for key in REQUIRED},
-        "contracts": [],
     }
 
 
 def audit(doc: dict) -> dict:
+    if not isinstance(doc, dict):
+        raise ValueError("checklist must be a JSON object")
     errors, omissions, unavailable = [], [], []
     if doc.get("format") != "collection-checklist-v1":
         errors.append("unsupported format")
@@ -60,26 +57,6 @@ def audit(doc: dict) -> dict:
         errors.append("items must be an object")
     for name in REQUIRED:
         check(name, items.get(name))
-    contracts = doc.get("contracts", [])
-    if not isinstance(contracts, list):
-        errors.append("contracts must be an array")
-        contracts = []
-    if not contracts and any(isinstance(items.get(k), dict) and
-                             items[k].get("status") == "observed" for k in
-                             ("four_week_candidates", "two_week_candidates")):
-        errors.append("observed candidates require contract field inventory")
-    for index, contract in enumerate(contracts):
-        if not isinstance(contract, dict):
-            errors.append(f"contracts[{index}]: must be an object")
-            continue
-        name = contract.get("contract_id") or f"contracts[{index}]"
-        if not contract.get("contract_id"):
-            errors.append(f"{name}: contract_id required")
-        fields = contract.get("fields", {})
-        if not isinstance(fields, dict):
-            fields = {}
-        for field in QUOTE_FIELDS:
-            check(f"{name}.{field}", fields.get(field))
     return {
         "status": "needs_followup" if errors or omissions else
                   "documented_with_missing_data" if unavailable else "documented",

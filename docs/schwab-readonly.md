@@ -61,7 +61,7 @@ not a browser collector, ingestion gate or trading approval. It lists untouched
 items and undocumented assertions while allowing partial-data analysis. Initialize
 before collection rather than inventing successful attempts at report time.
 
-Use these statuses for each item and each quote field:
+Use these statuses for each collection item:
 
 - `observed`: source inspected and value/evidence saved, including a verified empty list.
 - `not_provided`: relevant source actually inspected but the field is absent; retain
@@ -92,14 +92,15 @@ account evidence, not a second quote ledger. Capture/source clocks remain distin
 | dividend_events | Current official issuer distribution/corporate-action schedule and coverage through expiry, ex-date/amount when published; no declared future event is not proof none can occur |
 | fees | Actual opening total fees and dated closing assumptions, waiver, extra fees and explicit slippage; unknown fees remain unknown |
 
-For each captured contract append `contracts: [{contract_id, fields: {...}}]`.
-Use exact symbol/expiry/type/strike for contract_id. Each field has the same status
-object as a checklist item. Account for bid, ask, last, Delta, Theta, Gamma, Vega,
-IV (preserve displayed units), volume, OI, bid/ask size, Probability of Touch and
-Probability of OTM. Enable available research columns using permitted controls;
-if unavailable, record the attempt instead of deriving probabilities from Delta.
-The script lists these field names in `QUOTE_FIELDS`. `observed` field references
-should identify the exact canonical slice/row/cell or normalized quote.
+Use `quote_field_review` to record inspection of the existing canonical capture's
+rows, coverage, missing fields and importer warnings. Reference the capture record
+IDs rather than copying values or maintaining a second per-contract field-status
+inventory. Where `options data-audit` is available, reuse its field/coverage report;
+this checklist adds source-attempt evidence that quote statistics cannot infer.
+Account for bid/ask/last, Delta/Theta/Gamma/Vega, IV with displayed units, volume,
+OI, bid/ask sizes and provider Touch/OTM probabilities. If a missing field needs
+explanation, put the specific field/contract, attempted source and reason in the
+item's evidence. No separate quote schema or new analytics implementation is needed.
 
 Freeze requested coverage before observing outcomes. Held contracts are always
 tracked even when their tenor no longer ranks first. Do not simply reuse yesterday's
@@ -123,10 +124,9 @@ private evidence references), ingest available quotes and read back saved record
 No new tables or historical backfill are required. Old reports without a checklist
 remain legacy coverage unknown, never retrospectively complete.
 
-Every recommendation includes contract/quantity, bid/ask, Delta, premium per
-contract, strike-minus-spot dollars and percent with their timestamps, and provider
-Touch/OTM probabilities or explicit missing status. Reports summarize the checklist:
-collected, source missing, blocked, skipped, and which analyses each gap affects.
+Keep recommendation formatting in the existing reporting procedure. This checklist
+summarizes collected, source missing, blocked and skipped checks, and identifies
+which analyses each gap affects; it does not introduce another report template.
 Missing optional Greeks should not suppress available cost calculations; missing
 policy-critical evidence may still prevent a complete HOLD/entry decision. This
 process changes collection discipline, not numerical policy thresholds.

@@ -37,15 +37,7 @@ def test_skipped_and_undocumented_sources_are_distinct():
     assert "quote_times: evidence_ref required" in result["errors"]
 
 
-def test_observed_candidates_require_per_contract_fields():
-    doc = completed()
-    doc["items"]["four_week_candidates"]["status"] = "observed"
-    assert module.audit(doc)["errors"]
-    doc["contracts"] = [{"contract_id": "QQQ-20261016-C-795", "fields": {}}]
-    assert "QQQ-20261016-C-795.probability_touch" in module.audit(doc)["not_attempted"]
-
-
-def test_no_contracts_is_valid_when_login_blocked():
+def test_blocked_login_requires_no_duplicate_quote_inventory():
     result = module.audit(completed())
     assert not result["errors"]
     assert not result["not_attempted"]
@@ -55,3 +47,13 @@ def test_malformed_item_is_reported_not_crashed():
     doc = completed()
     doc["items"]["four_week_candidates"] = None
     assert module.audit(doc)["status"] == "needs_followup"
+
+
+def test_observed_review_links_existing_capture_without_copying_quotes():
+    doc = completed()
+    doc["items"]["quote_field_review"].update(
+        status="observed", evidence_ref="capture-record-id:quotes-and-warnings")
+    doc["capture_record_ids"] = ["capture-record-id"]
+    result = module.audit(doc)
+    assert not result["errors"]
+    assert "contracts" not in doc

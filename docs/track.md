@@ -123,10 +123,16 @@ Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlie
 ## 2026-09-22 — Explicit collection attempts and missing-data handling
 
 - Added a skill-routed collection contract and offline checklist initializer/auditor.
-- Reviews record attempted sources, missing reasons, per-contract fields, held/watch
+- Reviews record attempted sources, missing reasons, canonical field review, held/watch
   coverage and dynamically selected two-/four-week expiries before reporting.
 - Partial data remains usable; skipped checks stay visible and no policy checks are
   auto-passed. No database/schema changes or migration; historical records unchanged.
 - Validation: targeted checklist regressions and existing repository checks (see PR).
 - Limitation: caller evidence is not independently verified; this is not unattended
   browser recovery or a repaired browser collector. Published as a separate PR; no merge authorization.
+
+- Pre-merge integration review: removed duplicate per-contract field-status inventory;
+  reuse canonical importer coverage/warnings and the separate data-audit report.
+  Removed duplicated recommendation-format requirements owned by the report-fields PR.
+  The remaining script audits collection attempts only, without changing ingestion,
+  analytics, policy, database or browser behavior.
