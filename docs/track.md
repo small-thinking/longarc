@@ -26,7 +26,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - Validation: 317 Python tests, 9 Node bridge tests, Ruff, mypy and governance checks
   passed. Real local database smoke generated audit, both symbol comparisons and
   a position report; the database logical-content hash stayed unchanged. Reports
-  remain private. PR pending; not merged.
+  remain private. PR [#23](https://github.com/small-thinking/longarc/pull/23) open;
+  not merged.
 - Remaining: source-clock completeness, research-path orchestration, calendar-period
   returns and broker reconciliation. Unknown costs remain unknown; conditional
   matching of unknown quote multipliers is explicitly disclosed.
