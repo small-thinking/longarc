@@ -10,6 +10,27 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-21 — Repeatable data audit, candidate and position reports
+
+- Added three read-only CLI reports: data inventory/quality, same-batch candidate
+  comparisons, and recorded open-lot tracking. JSON retains provenance and exact
+  monetary units; Markdown presents totals, comparison rows and limitations.
+- Audit separates physical/current records, quote identities and actual execution
+  events; missing fields, expected-session gaps and replay blockers are explicit.
+  Candidate checks reuse policy screening without entry approval. Position reports
+  reuse fill accounting, preserve partial-close fee residuals, isolate providers and
+  modes, and separate realized results from conditional ask-close scenarios.
+- No schema change: no added/changed/dropped tables, columns, types, constraints,
+  keys or indexes; no migration, dependency addition or rewrite of existing records.
+  No new schedule, broker write, strategy threshold or income forecast.
+- Validation: 317 Python tests, 9 Node bridge tests, Ruff, mypy and governance checks
+  passed. Real local database smoke generated audit, both symbol comparisons and
+  a position report; the database logical-content hash stayed unchanged. Reports
+  remain private. PR pending; not merged.
+- Remaining: source-clock completeness, research-path orchestration, calendar-period
+  returns and broker reconciliation. Unknown costs remain unknown; conditional
+  matching of unknown quote multipliers is explicitly disclosed.
+
 ### 2026-09-21 — Shared multi-symbol covered-call workflow
 
 - Generalized bounded Schwab capture and selected-row import, advisory decisions, executions, costs and checkpoint replay to explicit stock/ETF CALL symbols, including QQQ and IAU. One skill/runbook selects the symbol and its own policy; source identity, roll legs and policy mismatches fail explicitly.
