@@ -34,6 +34,12 @@ SQLite was selected and the local observation storage slice is implemented. The 
   returns and broker reconciliation. Unknown costs remain unknown; conditional
   matching of unknown quote multipliers is explicitly disclosed.
 
+### 2026-09-21 — Consistent covered-call candidate reports
+
+- The skill routes every QQQ/IAU candidate report to a required field contract: spot/source timing, signed dollar/percent strike distance, bid/ask, Delta, premium, and provider Probability of Touch / Probability of OTM. Missing probabilities stay unknown and are not replaced by Delta or described as strategy win rates.
+- Candidate preference, current action and missing entry requirements are reported separately. This is documentation guidance only; no collector, strategy threshold, schema, dependency or execution change.
+- Validation: documentation diff, governance and skill validation pass. PR [#22](https://github.com/small-thinking/longarc/pull/22) merged. Next: apply these fields to fresh observations while retaining source limitations.
+
 ### 2026-09-21 — Shared multi-symbol covered-call workflow
 
 - Generalized bounded Schwab capture and selected-row import, advisory decisions, executions, costs and checkpoint replay to explicit stock/ETF CALL symbols, including QQQ and IAU. One skill/runbook selects the symbol and its own policy; source identity, roll legs and policy mismatches fail explicitly.
@@ -143,3 +149,25 @@ SQLite was selected and the local observation storage slice is implemented. The 
 ## Verification
 
 Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlier entries retain historical test counts. Browser data are unverified and incomplete; these checks validate the engineering workflow, not a trading strategy.
+
+## 2026-09-22 — Explicit collection attempts and missing-data handling
+
+- Added a skill-routed collection contract and offline checklist initializer/auditor.
+- Reviews record attempted sources, missing reasons, canonical field review, held/watch
+  coverage and dynamically selected two-/four-week expiries before reporting.
+- Partial data remains usable; skipped checks stay visible and no policy checks are
+  auto-passed. No database/schema changes or migration; historical records unchanged.
+- Validation: targeted checklist regressions and existing repository checks (see PR).
+- Limitation: caller evidence is not independently verified; this is not unattended
+  browser recovery or a repaired browser collector. Published as a separate PR; no merge authorization.
+
+- Pre-merge integration review: removed duplicate per-contract field-status inventory;
+  reuse canonical importer coverage/warnings and the separate data-audit report.
+  Removed duplicated recommendation-format requirements owned by the report-fields PR.
+  The remaining script audits collection attempts only, without changing ingestion,
+  analytics, policy, database or browser behavior.
+- Integration validation after refinement: independent merge-tree checks with report-fields
+  (#22) and analysis-reports (#23) passed without conflicts; the combined #23/#24
+  tree passed 322 Python tests and 9 browser-bridge tests. No actual merge performed.
+
+- PR cleanup: #22 and #24 merged after scoped review; #23 retains additive report commands. Final integrated checks run before merging #23.
