@@ -95,6 +95,17 @@ A later summary should show observed episode counts, their sampling cadence/comp
 The report identifies the observed account state and as-of times, the limited candidate universe, explicit assumptions, computed scenarios, missing facts and stored record IDs. Distinguish premium cash received, scenario option P&L and total portfolio return; do not invent expected returns. No order is executed. If a smaller model is used later, judge it by this same evidence/readback checklist; this document does not establish its reliability in advance.
 
 
+### Required recommendation fields
+
+For every QQQ or IAU candidate, including a no-entry or research-only candidate, show:
+
+- Exact underlying, expiry, strike and call identity; bid/ask, Delta, and per-contract premium cash flow with the price basis, multiplier and fee treatment explicit.
+- Current observed underlying price and its source time, plus quote/Greek source times when available. Distinguish browser capture time from source time; label reused quotes with their original observation time.
+- Strike distance in dollars, `strike - underlying_price`, and percent, `100 * (strike - underlying_price) / underlying_price`, using that same observed price. Preserve the sign; call positive distance “above spot,” not a guaranteed safe buffer. If the underlying price is missing or unusable, keep both distances unknown.
+- **Probability of Touch** and **Probability of OTM**, copied from the provider with displayed units and source/capture timing. Always include both fields; display “unknown / not provided” and the reason when unavailable. Do not substitute Delta, `1 - Delta`, or a formula-derived value. These provider model estimates are not measured probabilities of strategy profit, avoiding a defensive buyback, or keeping the shares; do not silently reconcile them to Delta.
+
+Keep a candidate comparison separate from the current action recommendation. State whether the candidate meets the verified entry requirements or remains `NO_ENTRY` / `INSUFFICIENT_DATA`, name outstanding facts, and show any suggested quantity separately from the theoretical share-coverage maximum. A preferred candidate alone is not a recommendation to place an order. Preserve the observed probabilities and missing fields in the existing capture records even if no trade occurs; never record a recommendation as a fill.
+
 ## Repeatable candidate capture and history
 
 Use `scripts/collect_schwab_chain.js` inside the installed Codex browser runtime with the current documented tab binding. It exports `collectSchwabChain(tab, options, observe)`; it is not a standalone browser driver. Read current page state before invoking it. Pass observed expiry dates, strike centers, optional exact watched contracts and independently observed underlying price/time. The `observe` callback must refresh browser state after each action. `includeGreeks: true` enables the visible IV/Gamma/Vega/size columns through Customize. Only research-page controls are used.

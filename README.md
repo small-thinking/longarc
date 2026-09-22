@@ -8,6 +8,8 @@ QQQ and IAU share one covered-call workflow with separate symbol-scoped policies
 
 SQLite storage foundation is implemented: initialization, observation writes/reads, health checks and backup/restore through a JSON CLI. See [storage operations](docs/storage.md). Pure quote and explicit-quantity scenario calculations with audit logging are available. Browser-assisted candidate-chain capture, sparse history reports and dated fee estimates are available through `options`; see [the runbook](docs/schwab-readonly.md#repeatable-candidate-capture-and-history). Deterministic advisory rules and an evidence-backed manual execution journal are available; see [decision and result tracking](docs/calculations.md#deterministic-decisions-and-actual-results). Unattended API collection, scheduling, automatic broker reconciliation and alerts remain **unimplemented**.
 
+Candidate reports include spot and quote timing, dollar/percent distance to strike, and provider Probability of Touch and Probability of OTM alongside bid/ask, Delta and premium. Missing values remain explicit; candidate selection is separate from the current action recommendation. See [required report fields](docs/schwab-readonly.md#required-recommendation-fields).
+
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
 
 ## Multiple underlyings, one workflow
