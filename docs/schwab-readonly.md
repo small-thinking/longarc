@@ -38,6 +38,99 @@ itself authorize a policy change, a trade, or a scheduled review.
 2. Use the installed browser-use tool and its current instructions to locate the existing authorized Schwab tab. Discover tabs and page state afresh; never reuse tab IDs/selectors from an earlier session. Ordinary read-only navigation, expiry selectors and scrolling are sufficient. Do not click bid/ask trade buttons, order builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker.
 3. Create a unique run identifier and explicit UTC capture start/end times. This is one user-requested run. No autonomous schedule, credentials storage or background monitoring is implied.
 
+## Required collection checklist
+
+Missing data is allowed. Every review must account for the required collection
+attempts, not obtain every value. Continue all calculations supported by available
+inputs; name the missing inputs for each unavailable conclusion. Collection
+completeness, numerical calculability and policy eligibility are separate. Never
+turn an unavailable field into zero or a passed policy check. Existing risk evidence
+still takes priority over unrelated missing inputs.
+
+Before browsing, create a per-symbol checklist under the existing private run
+folder. Use the same run ID as the capture and report:
+
+```bash
+uv run python scripts/collection_checklist.py --init QQQ > private/RUN/checklist.json
+# Populate observed sources, timestamps, references and reasons during collection.
+uv run python scripts/collection_checklist.py --file private/RUN/checklist.json > private/RUN/checklist-audit.json
+```
+
+Replace RUN with the actual run directory. The script is an offline process audit,
+not a browser collector, ingestion gate or trading approval. It lists untouched
+items and undocumented assertions while allowing partial-data analysis. Initialize
+before collection rather than inventing successful attempts at report time.
+
+Use these statuses for each collection item:
+
+- `observed`: source inspected and value/evidence saved, including a verified empty list.
+- `not_provided`: relevant source actually inspected but the field is absent; retain
+  the source reference and evidence. This means absent from that source, not unavailable everywhere.
+- `blocked`: a specific access/tool failure prevented inspection; retain failure evidence.
+- `not_applicable`: explain why the item does not apply to this run or contract.
+- `not_attempted`: skipped, with reason and next step. Never relabel this as source missing.
+
+For observed/not_provided/blocked items save `checked_at`, `source_ref` (URL or
+page identity), and `evidence_ref` (private file/record plus field or section).
+All other statuses need a reason too. Keep raw values in canonical captures or
+account evidence, not a second quote ledger. Capture/source clocks remain distinct.
+
+| Checklist item | Required inspection and retained evidence |
+| --- | --- |
+| session_calendar | Official session date, open/close, timezone, actual run start and any missed target |
+| positions | Selected account alias, shares, all option legs, signed quantities, filters and pagination |
+| orders | All relevant open/partial/pending orders and visible filled confirmations; coverage reservations |
+| buyback_funds | Cash and relevant available-to-trade funds/restrictions; cash is not assumed buying power |
+| execution_reconciliation | Prior recorded fills versus visible history; opening price/time precision/fees, unmatched events and history coverage |
+| expiry_inventory | Visible listed expiry dates, DTE, target/range from current policy and selection rationale |
+| held_and_watch_contracts | All held contracts and estimate watch_contracts; explicit empty sets or blocked coverage |
+| four_week_candidates | Inspect policy-eligible expiries nearest the target, including adjacent listed expiries needed to compare; save windows/rejections |
+| two_week_candidates | Same process for the research target/range; keep research separate from live recommendations |
+| underlying_quote | Symbol, price/basis, source time and capture time for each slice; disclose asynchronous quotes |
+| quote_times / greek_times / delay_disclosure | Chain, then relevant read-only quote detail/help/disclosure if absent; independently record each outcome |
+| contract_terms | Multiplier, deliverable, adjusted status and expiry from read-only contract details; inferred multiplier alone is not verified terms |
+| dividend_events | Current official issuer distribution/corporate-action schedule and coverage through expiry, ex-date/amount when published; no declared future event is not proof none can occur |
+| fees | Actual opening total fees and dated closing assumptions, waiver, extra fees and explicit slippage; unknown fees remain unknown |
+
+Use `quote_field_review` to record inspection of the existing canonical capture's
+rows, coverage, missing fields and importer warnings. Reference the capture record
+IDs rather than copying values or maintaining a second per-contract field-status
+inventory. Where `options data-audit` is available, reuse its field/coverage report;
+this checklist adds source-attempt evidence that quote statistics cannot infer.
+Account for bid/ask/last, Delta/Theta/Gamma/Vega, IV with displayed units, volume,
+OI, bid/ask sizes and provider Touch/OTM probabilities. If a missing field needs
+explanation, put the specific field/contract, attempted source and reason in the
+item's evidence. No separate quote schema or new analytics implementation is needed.
+
+Freeze requested coverage before observing outcomes. Held contracts are always
+tracked even when their tenor no longer ranks first. Do not simply reuse yesterday's
+candidate expiry. For example, with a 28-day target and eligible listed expiries
+24 and 31 days away, inspect the 31-day expiry too; retaining the held 24-day
+contract alone cannot establish the best new-entry tenor. Broaden strike windows
+only as needed to find candidates in the policy Delta band. If bounded collection
+stops early, list uninspected expiries/windows; do not claim full-chain optimality.
+
+Use the existing bridge and canonical ingest. If the bridge fails to associate a
+table with its expiry, record that failure; a manual fallback must preserve exact
+headers/cells and explicit expiry, and use the same checklist. Do not silently
+reuse ad-hoc scripts, old timestamps or old account evidence as fresh evidence.
+Do not repair browser code inside scheduled checks.
+
+Before finalizing, run the checklist audit, inspect every not_attempted item and
+complete safe relevant follow-ups where possible. A blocked run can finish with
+missing data; its report must say what was attempted and what remains unknown.
+Save the checklist/audit with the existing report observation (inputs/results or
+private evidence references), ingest available quotes and read back saved records.
+No new tables or historical backfill are required. Old reports without a checklist
+remain legacy coverage unknown, never retrospectively complete.
+
+Keep recommendation formatting in the existing reporting procedure. This checklist
+summarizes collected, source missing, blocked and skipped checks, and identifies
+which analyses each gap affects; it does not introduce another report template.
+Missing optional Greeks should not suppress available cost calculations; missing
+policy-critical evidence may still prevent a complete HOLD/entry decision. This
+process changes collection discipline, not numerical policy thresholds.
+
 ## Read account facts first
 
 Use visible Positions and Orders views for the intended account. Record an account alias locally, not account numbers in reports or commits. Read the selected underlying shares and all of its option legs, contract identities and signed quantities, and relevant open/partial/pending orders. Check visible timestamps, filters and pagination; a filtered or collapsed list is not proof that no calls/orders exist. Read cash relevant to potential buybacks; buying power is not automatically cash or an approved spending budget.

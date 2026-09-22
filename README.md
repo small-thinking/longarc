@@ -113,3 +113,11 @@ explain required source checks and execution assumptions. Monthly scaling is an
 explicit scenario, not an empirical income forecast; missing paths and assignment
 cannot be reconstructed. All reports remain ad hoc, with no automatic trading or
 policy changes.
+
+## Repeatable collection with missing data
+
+Each read-only review uses a [collection checklist](docs/schwab-readonly.md#required-collection-checklist)
+covering account evidence, expiry selection, quote fields, source times, contract
+terms, dividends and fees. `scripts/collection_checklist.py` creates and audits the
+attempt inventory, distinguishing skipped checks from unavailable data. Partial
+analysis remains available; the audit neither certifies evidence nor approves trades.
