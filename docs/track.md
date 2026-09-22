@@ -136,3 +136,6 @@ Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlie
   Removed duplicated recommendation-format requirements owned by the report-fields PR.
   The remaining script audits collection attempts only, without changing ingestion,
   analytics, policy, database or browser behavior.
+- Integration validation after refinement: independent merge-tree checks with report-fields
+  (#22) and analysis-reports (#23) passed without conflicts; the combined #23/#24
+  tree passed 322 Python tests and 9 browser-bridge tests. No actual merge performed.
