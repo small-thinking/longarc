@@ -75,6 +75,13 @@ def test_partial_close_remaining_fee_and_realized_separate(db):
     assert "historical estimates" in render_markdown(result)
 
 
+def test_empty_ledger_markdown_labels_recorded_subtotal_not_account_income(db):
+    markdown = render_markdown(report(db))
+    assert "Recorded all-time realized net option P&L subtotal through as-of: $0.0000" in markdown
+    assert "Complete account realized option P&L is unknown" in markdown
+    assert "an empty ledger does not establish zero income" in markdown
+
+
 def test_residual_fee_uses_ledger_rounding(db):
     execution(db, quantity=3, fees_u=1)
     execution(db, "close", "BTC", quantity=2, fees_u=0)

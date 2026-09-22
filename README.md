@@ -36,7 +36,8 @@ open-option marks. See [symbol contracts and compatibility](docs/calculations.md
 replay-data blockers. `options compare-candidates` compares one saved quote batch
 against explicit policy thresholds and fee assumptions. `options position-report`
 joins recorded open lots to quote histories, separates realized P&L from conditional
-ask-close scenarios, and exposes stale or missing evidence. All three export JSON
+ask-close scenarios, and exposes stale or missing evidence. Realized totals are
+recorded all-time subtotals, not reconciled account income. All three export JSON
 and Markdown without changing the database. See [analysis reports](docs/analysis-reports.md)
 for commands, selection rules, units and limits. These are on-demand reports, not
 automatic candidate selection or validated return forecasts.

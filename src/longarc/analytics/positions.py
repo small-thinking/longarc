@@ -293,7 +293,10 @@ def render_markdown(report: dict[str, Any]) -> str:
 
     lines = [f"# Position report — {report['as_of']}", "",
              f"Execution mode: {report['mode']}; quote mode: {report['quote_mode']}.",
-             f"Realized net option P&L: {money(report['realized']['realized_net_option_pnl_u'])}.",
+             "Recorded all-time realized net option P&L subtotal through as-of: "
+             f"{money(report['realized']['realized_net_option_pnl_u'])}. "
+             "Complete account realized option P&L is unknown; "
+             "an empty ledger does not establish zero income.",
              ""]
     for lot in report["open_lots"]:
         c = lot["contract"]

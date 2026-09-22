@@ -20,6 +20,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
   Candidate checks reuse policy screening without entry approval. Position reports
   reuse fill accounting, preserve partial-close fee residuals, isolate providers and
   modes, and separate realized results from conditional ask-close scenarios.
+  Markdown labels realized totals as recorded all-time subtotals with account
+  completeness unknown, including when the ledger is empty.
 - No schema change: no added/changed/dropped tables, columns, types, constraints,
   keys or indexes; no migration, dependency addition or rewrite of existing records.
   No new schedule, broker write, strategy threshold or income forecast.
