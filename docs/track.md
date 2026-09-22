@@ -119,3 +119,14 @@ SQLite was selected and the local observation storage slice is implemented. The 
 ## Verification
 
 Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlier entries retain historical test counts. Browser data are unverified and incomplete; these checks validate the engineering workflow, not a trading strategy.
+
+## 2026-09-22 — Explicit collection attempts and missing-data handling
+
+- Added a skill-routed collection contract and offline checklist initializer/auditor.
+- Reviews record attempted sources, missing reasons, per-contract fields, held/watch
+  coverage and dynamically selected two-/four-week expiries before reporting.
+- Partial data remains usable; skipped checks stay visible and no policy checks are
+  auto-passed. No database/schema changes or migration; historical records unchanged.
+- Validation: targeted checklist regressions and existing repository checks (see PR).
+- Limitation: caller evidence is not independently verified; this is not unattended
+  browser recovery or a repaired browser collector. Published as a separate PR; no merge authorization.

@@ -11,6 +11,14 @@ Choose the mode matching the user's request. Read-only analysis does not require
 
 For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). For QQQ, IAU or a combined review, resolve each exact symbol and its own policy from that context, then reuse the [same procedure](../../../docs/schwab-readonly.md#multiple-symbol-reviews). Pass the symbol explicitly to capture/history/research and match policy `scope.underlying` to decision/replay inputs. Old unscoped policies belong only to QQQ; do not infer IAU thresholds from a discussion of candidates. Coverage, episodes and results stay separate by asset; shared account cash is reconciled once. Paths are relative to the repository root unless linked otherwise. Use available browser tools for current page state and existing calculation tools for arithmetic. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
 
+For every analysis, initialize and complete the runbook's [required collection
+checklist](../../../docs/schwab-readonly.md#required-collection-checklist), then run
+`scripts/collection_checklist.py` before reporting. Missing data is supported;
+distinguish source absence, access failure, not applicable and not attempted.
+Recompute candidate expiry coverage each run, retain held/research obligations,
+and persist attempt evidence alongside canonical quotes. A checklist is not a
+policy pass: keep partial calculations and unresolved trading checks separate.
+
 ## Consolidation
 
 Update the existing file that owns new information. Prefer the private context/policy for personal decisions, the runbook for browser procedures, and `docs/track.md` for high-level progress. Create a new file only when existing files cannot reasonably serve the purpose; do not create a new context, handoff, skill, or progress log for each session. Replace superseded active guidance and retain only useful provenance or concise change history.
