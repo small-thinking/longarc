@@ -38,10 +38,13 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     p, roll = policy["policy_parameters"], policy["roll"]
     watch, defend = _num(p, "watch_delta"), _num(p, "defend_delta")
     profit = _num(p, "profit_capture_fraction")
+    profit_operator = p.get("profit_capture_operator", ">=")
     if watch is None or defend is None or not 0 < watch < defend <= 1:
         raise ValueError("Require ordered watch/defend thresholds")
     if profit is None or not 0 < profit < 1:
         raise ValueError("Invalid profit threshold")
+    if profit_operator not in (">", ">="):
+        raise ValueError("Invalid profit threshold operator")
     exit_days = _integer(p.get("latest_exit_dte"), "latest_exit_dte")
     if exit_days is None:
         raise ValueError("latest_exit_dte required")
@@ -116,7 +119,13 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
            and multiplier is not None and opening_fees is not None
            and closing_fees is not None else None)
     metrics.update(gross_capture=None if capture is None else str(capture), net_close_pnl_u=net)
-    checks["profit_exit"] = (False if capture is not None and capture < profit else
+    if capture is None:
+        threshold_reached = None
+    elif profit_operator == ">":
+        threshold_reached = capture > profit
+    else:
+        threshold_reached = capture >= profit
+    checks["profit_exit"] = (False if threshold_reached is False else
                              net > 0 if capture is not None and net is not None else None)
     if checks["profit_exit"] is True:
         reasons.append("profit_threshold_and_positive_fee_adjusted_pnl")

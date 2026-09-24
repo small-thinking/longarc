@@ -10,6 +10,12 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-24 — Explicit current QQQ profit policy
+
+- The skill now selects the current private QQQ decision policy instead of a dated review copy. The policy can specify a strict gross premium capture comparison while preserving the existing positive fee-adjusted P&L check and all risk exits.
+- Historical decisions and other symbol policies retain their stored parameters; no broker action, database schema change or migration. Current private values remain outside Git.
+- Validation: 324 Python tests, targeted decision boundary test, Ruff, mypy and governance passed. PR pending; market quote/source-time and issuer dividend evidence remain separate eligibility gates.
+
 ### 2026-09-21 — Repeatable data audit, candidate and position reports
 
 - Added three read-only CLI reports: data inventory/quality, same-batch candidate
