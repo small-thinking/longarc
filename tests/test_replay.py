@@ -103,7 +103,8 @@ def test_replay_calls_shared_policy_and_logs_idempotently(setup, monkeypatch):
 
 def test_replay_passes_opening_time_to_shared_profit_pace_rule(setup):
     db, r, p, fees = setup
-    p["policy_parameters"].update(profit_capture_fraction=.6,
+    p["policy_parameters"].pop("profit_capture_fraction")
+    p["policy_parameters"].update(profit_pace_mode="only",
                                    profit_pace_min_capture_fraction=.5)
     r["observations"] = [frame(db, 21), frame(db, 22, bid=".43", ask=".45")]
     result = replay(db, r, p, fees)
