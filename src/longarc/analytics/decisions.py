@@ -6,7 +6,7 @@ inferred from a capture clock. No market predictions or broker actions.
 from __future__ import annotations
 
 import hashlib
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -27,6 +27,11 @@ def _num(obj: dict[str, Any], name: str) -> Decimal | None:
     return _number(obj.get(name), name)
 
 
+def _microseconds(duration: timedelta) -> int:
+    return ((duration.days * 86_400 + duration.seconds) * 1_000_000
+            + duration.microseconds)
+
+
 def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     """Policy uses policy_parameters and roll from the existing private contract.
 
@@ -38,12 +43,20 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     p, roll = policy["policy_parameters"], policy["roll"]
     watch, defend = _num(p, "watch_delta"), _num(p, "defend_delta")
     profit = _num(p, "profit_capture_fraction")
+    pace_min = _num(p, "profit_pace_min_capture_fraction")
+    pace_mode = p.get("profit_pace_mode", "additional")
     profit_operator = p.get("profit_capture_operator", ">=")
     if watch is None or defend is None or not 0 < watch < defend <= 1:
         raise ValueError("Require ordered watch/defend thresholds")
-    if profit is None or not 0 < profit < 1:
+    if pace_mode not in ("additional", "only"):
+        raise ValueError("Invalid profit pace mode")
+    if pace_mode == "only" and pace_min is None:
+        raise ValueError("Profit pace minimum required for pace-only policy")
+    if pace_mode != "only" and (profit is None or not 0 < profit < 1):
         raise ValueError("Invalid profit threshold")
-    if profit_operator not in (">", ">="):
+    if pace_min is not None and not 0 < pace_min < 1:
+        raise ValueError("Invalid profit pace minimum")
+    if pace_mode != "only" and profit_operator not in (">", ">="):
         raise ValueError("Invalid profit threshold operator")
     exit_days = _integer(p.get("latest_exit_dte"), "latest_exit_dte")
     if exit_days is None:
@@ -119,16 +132,49 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
            and multiplier is not None and opening_fees is not None
            and closing_fees is not None else None)
     metrics.update(gross_capture=None if capture is None else str(capture), net_close_pnl_u=net)
-    if capture is None:
+    if pace_mode == "only" or capture is None:
         threshold_reached = None
     elif profit_operator == ">":
+        assert profit is not None
         threshold_reached = capture > profit
     else:
+        assert profit is not None
         threshold_reached = capture >= profit
-    checks["profit_exit"] = (False if threshold_reached is False else
-                             net > 0 if capture is not None and net is not None else None)
+    if pace_min is not None:
+        opened_at = _time(f["opening_executed_at"]) if f.get("opening_executed_at") else None
+        # This is a comparison clock, not the broker's exercise deadline.
+        expiry_close = (datetime.combine(expiry, time(16), NY) if expiry else None)
+        elapsed_fraction = None
+        if opened_at is not None and expiry_close is not None:
+            if opened_at >= expiry_close or now < opened_at:
+                raise ValueError("Opening time must precede observation and expiry close")
+            elapsed_fraction = (Decimal(_microseconds(now - opened_at))
+                                / Decimal(_microseconds(expiry_close - opened_at)))
+        metrics["profit_pace_elapsed_fraction"] = (
+            None if elapsed_fraction is None else str(elapsed_fraction))
+        if capture is None:
+            checks["profit_pace_reached"] = None
+        elif capture <= pace_min:
+            checks["profit_pace_reached"] = False
+        else:
+            checks["profit_pace_reached"] = (
+                None if elapsed_fraction is None else capture > elapsed_fraction)
+        if pace_mode == "only":
+            threshold_reached = checks["profit_pace_reached"]
+        elif checks["profit_pace_reached"] is True:
+            threshold_reached = True
+        elif threshold_reached is False and checks["profit_pace_reached"] is None:
+            threshold_reached = None
+    if threshold_reached is None:
+        checks["profit_exit"] = None
+    elif threshold_reached is False:
+        checks["profit_exit"] = False
+    else:
+        checks["profit_exit"] = net > 0 if net is not None else None
     if checks["profit_exit"] is True:
-        reasons.append("profit_threshold_and_positive_fee_adjusted_pnl")
+        reasons.append("profit_pace_and_positive_fee_adjusted_pnl"
+                       if pace_min is not None and checks["profit_pace_reached"] is True
+                       else "profit_threshold_and_positive_fee_adjusted_pnl")
         return output("BTC_PROFIT")
     required = ("coverage_verified", "orders_clear", "valid_quote", "greeks_usable",
                 "underlying_usable", "dividend_window_clear")
