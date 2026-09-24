@@ -168,6 +168,7 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
         close = None
         if opening:
             f["opening_premium_u"] = opening["premium_u"]
+            f["opening_executed_at"] = opening["opened_at"]
             if priced(f):
                 close = cost(f, opening["premium_u"])
                 f["allocated_opening_fees_u"] = int(Decimal(close["opening_fees_u"]))

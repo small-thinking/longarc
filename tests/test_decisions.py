@@ -69,6 +69,40 @@ def test_strict_profit_threshold_requires_more_than_sixty_percent(scenario, poli
     assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
 
 
+def test_early_profit_pace_is_strict_and_requires_actual_open_time(scenario, policy):
+    policy["policy_parameters"].update(
+        profit_capture_operator=">", profit_pace_min_capture_fraction=.5)
+    scenario["as_of"] = "2026-09-22T19:00:00Z"
+    scenario["facts"]["opening_executed_at"] = "2026-09-21T19:00:00Z"
+    scenario["facts"].update(bid_u=480000, ask_u=500000)
+    assert evaluate(scenario, policy)["action"] == "HOLD"  # Exactly 50% is not enough.
+    scenario["facts"].update(bid_u=470000, ask_u=490000)
+    result = evaluate(scenario, policy)
+    assert result["action"] == "BTC_PROFIT"
+    assert result["checks"]["profit_pace_reached"] is True
+    scenario["facts"].pop("opening_executed_at")
+    assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
+    scenario["facts"]["delta"] = .32
+    assert evaluate(scenario, policy)["action"] == "BTC_RISK"
+
+
+def test_profit_pace_seventy_five_percent_boundary_and_fixed_fallback(scenario, policy):
+    policy["policy_parameters"].update(
+        profit_capture_fraction=.9, profit_capture_operator=">",
+        profit_pace_min_capture_fraction=.5, latest_exit_dte=0)
+    scenario["facts"]["opening_executed_at"] = "2026-09-21T20:00:00Z"
+    scenario["as_of"] = "2026-10-10T14:00:00Z"  # 75% of 25 calendar days.
+    scenario["facts"].update(bid_u=240000, ask_u=250000)
+    result = evaluate(scenario, policy)
+    assert result["metrics"]["profit_pace_elapsed_fraction"] == "0.75"
+    assert result["checks"]["profit_pace_reached"] is False
+    scenario["facts"].update(bid_u=230000, ask_u=240000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"].pop("opening_executed_at")
+    policy["policy_parameters"]["profit_capture_fraction"] = .6
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+
+
 @pytest.mark.parametrize("field,value", [("dividend_window_clear", None), ("orders_clear", False),
                                         ("coverage_verified", False), ("greeks_usable", False)])
 def test_critical_unknowns_and_failed_checks_block_hold(scenario, policy, field, value):

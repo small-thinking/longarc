@@ -101,6 +101,16 @@ def test_replay_calls_shared_policy_and_logs_idempotently(setup, monkeypatch):
     assert saved["mode"] == "shadow" and saved["quality"] == "synthetic"
 
 
+def test_replay_passes_opening_time_to_shared_profit_pace_rule(setup):
+    db, r, p, fees = setup
+    p["policy_parameters"].update(profit_capture_fraction=.6,
+                                   profit_pace_min_capture_fraction=.5)
+    r["observations"] = [frame(db, 21), frame(db, 22, bid=".43", ask=".45")]
+    result = replay(db, r, p, fees)
+    assert [d["action"] for d in result["decisions"]] == ["STO_CANDIDATE", "BTC_PROFIT"]
+    assert result["decisions"][1]["checks"]["profit_pace_reached"] is True
+
+
 def test_risk_loss_is_included_and_not_converted_to_roll(setup):
     db, r, p, fees = setup
     entry = frame(db, 21)

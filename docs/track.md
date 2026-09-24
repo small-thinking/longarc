@@ -10,6 +10,12 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-24 — Additional QQQ profit-pace trigger
+
+- Added an optional early BTC profit signal when captured premium exceeds both a policy minimum and elapsed current-leg lifetime; the existing fixed profit trigger and risk-exit priority remain. Replay passes its actual simulated leg opening time to the shared decision rules. Missing live opening time cannot satisfy the pace rule.
+- The active private QQQ policy uses a greater-than-50% early minimum alongside its strict greater-than-60% fixed trigger. This is a management heuristic, not an established optimal exit or a broker order. Existing policies without the new parameter keep their behavior; IAU and historical QQQ records are unchanged. No database schema change or migration.
+- Validation: 327 Python tests, Ruff, mypy and governance passed. PR status pending.
+
 ### 2026-09-24 — Explicit current QQQ profit policy
 
 - The skill now selects the current private QQQ decision policy instead of a dated review copy. The policy can specify a strict gross premium capture comparison while preserving the existing positive fee-adjusted P&L check and all risk exits.

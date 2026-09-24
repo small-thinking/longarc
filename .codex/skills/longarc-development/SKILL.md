@@ -19,6 +19,11 @@ For QQQ decisions, load the current private policy JSON at
 historical evidence and must not replace the current rule. The policy defines
 profit capture and its comparison operator; calculate from the current ask and
 the actual opening premium, with positive fee-adjusted P&L still required.
+If the QQQ policy enables the additional profit-pace trigger, use the actual
+current-leg STO execution time and the expiry date (16:00 New York planning
+cutoff). Report gross premium capture and elapsed lifetime separately; an
+unknown opening time makes the pace trigger unknown, not satisfied. The fixed
+profit trigger and risk exits remain independent.
 
 ## Read-only covered-call analysis
 
