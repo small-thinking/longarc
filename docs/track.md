@@ -22,6 +22,10 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - Routed the existing skill/runbook through IV context on requested reviews, with
   policy gates/exits first, no calibrated IV weight and USD-only monetary scenarios.
   Clarified that present ask-based BTC calculations do not need a future forecast.
+- Documented explicitly adopted, versioned heuristic weights, normalized/missing
+  components, common-benchmark limitations and distribution-shift research. No
+  automatic score, detector or learned model was added; current selection/exit rules
+  remain separate and profitable-outcome correlation is still an untested hypothesis.
   Skill-format/link and diff checks cover this documentation follow-up.
 - Database changes: none; no migrations, scheduler, broker operations or policy edits.
 - Validation: 344 Python tests, 9 browser-bridge tests, Ruff, mypy and governance
