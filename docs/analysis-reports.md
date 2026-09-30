@@ -129,3 +129,106 @@ list, and JSON/Markdown paths must differ. Keep account reports under ignored
 These commands complement `options history`, `performance`, `replay` and `estimate`.
 Automated research-path maintenance and calendar-period return reports are future
 work. More formulas cannot reconstruct missing source timestamps or market paths.
+
+## Saved IV context and explicit scenarios
+
+```bash
+uv run python -m longarc.cli options iv-history \
+  --db private/longarc.sqlite3 --symbol QQQ \
+  --target-dte 28 --target-delta 0.075 \
+  --json-output private/reports/iv-history.json \
+  --markdown-output private/reports/iv-history.md
+```
+
+This read-only report isolates one source (default `schwab_visible_browser`) and
+observed data, excluding explicitly synthetic quality even if labelled observe.
+Missing evidence returns `insufficient_comparable_iv`, not zero or
+a policy pass. Output paths cannot overwrite the database, WAL/SHM, session input,
+or each other. No schema or policy change, scheduling, collection or cache is added.
+
+The default target is 28 **calendar** DTE and 0.075 call Delta, with tolerances of
+7 days and 0.025 Delta. Select nearest DTE, then Delta, then expiry/strike in each
+batch **before examining IV**. Retain the latest target-bearing batch per New York
+date; holding-only captures without a target match do not replace that stream.
+A held call inside target tolerances can replace the broader day's sample; consistent
+daily neighborhoods are required, and changing coverage remains a comparison limit.
+Missing/invalid IV
+or source clocks in that sample cannot cause fallback to older favorable values.
+This is a bounded nearest-match changing-contract proxy, not an interpolated
+constant-tenor surface. Selected contracts and deviations remain in JSON.
+
+Only positive `iv` with `iv_unit=fraction`, valid bid/ask and independent quote/Greek
+source times within the disclosed age tolerance (default 300 seconds at capture)
+enter statistics. Raw `provider_display` is counted and excluded without guessing.
+Fractions assume a consistent source annualization convention; the source IV model
+and bid/mid/ask calculation basis remain unverified. Closed-session captures and
+weekends are excluded. `--expected-dates` can supply actual exchange sessions;
+otherwise holiday and missing-session completeness remain unknown.
+
+`--as-of` is a timezone-qualified knowledge cutoff, default now. Both observation
+and database-record times must precede it; later supersession cannot hide evidence
+available then. The latest saved target date is the reference. **Exclude that whole
+date** from the historical distribution, including its earlier intraday captures.
+Source age at capture is separate from the saved reference's age at `--as-of`.
+
+The default lookback is 252 prior observed target dates (`--lookback-samples`), not
+a guaranteed year. An explicit session list instead bounds the window to the last
+252 listed sessions and exposes gaps. Min/median/max describe usable prior dates.
+Percentile/rank require `--min-samples` (default 30; a reporting guard, not statistical
+validation or a trading threshold):
+
+- Percentile = 100 × count(prior IV strictly below reference IV) / sample count;
+  ties are excluded.
+- Rank = 100 × (reference IV − low) / (high − low); the range includes prior samples
+  and the reference, keeping rank within 0–100. Flat ranges have unknown rank.
+
+Optional arguments are explicit scenario assumptions, all IV/volatility in fractions:
+
+```bash
+# Hypothetical inputs, not current market facts or verified holdings.
+uv run python -m longarc.cli options iv-history \
+  --db private/longarc.sqlite3 --symbol QQQ \
+  --forecast-volatility 0.20 --reference-iv 0.20 \
+  --vega-per-vol-point 0.09 --contracts 1 --multiplier 100
+```
+
+For usable IV 0.30, the forecast spread is 10 volatility percentage points, or
+`0.30² − 0.20² = 0.05` annualized decimal-variance units. This is a model-dependent
+**single-call variance-spread proxy**, not model-free VRP, a fitted forecast or dollar
+profit. The caller's forecast must have been available at the quote time, match the
+remaining calendar-expiry horizon and use consistent annualization; those assertions
+are not verified. Trailing RV comparisons are descriptive. Future RV is an outcome,
+unavailable at entry; empirical work needs real licensed bars and actual sessions
+inside that calendar horizon, not 28 trading days substituted for 28 calendar DTE.
+
+IV-only short-call sensitivity = `Vega × 100 × (IV − reference IV) × contracts ×
+multiplier`, with Vega explicitly **dollars/share per percentage point**. Thus 30%
+to 20%, Vega $0.09 and multiplier 100 gives a hypothetical gross $90. Other inputs
+(spot/time/rates/dividends) stay constant; other price effects, fees, spread and
+slippage are excluded. Larger moves need model repricing because Vega changes.
+Without `--reference-iv`, prior median is a scenario reference only after the
+sample guard passes; it is not a forecast. Provider Vega units are never inferred.
+
+### Decision use and present-close calculations
+
+Follow the [entry and holding review procedure](schwab-readonly.md#iv-context-in-entry-and-holding-reviews) when using this report. Percentile can enter an explicitly adopted, versioned heuristic sum; its weight remains uncalibrated and no automatic policy threshold is added. This CLI exports IV evidence only: it does not calculate the multi-factor score, detect distribution shift, learn weights or enforce a scoring policy. Current ask-based BTC cost/P&L needs no forward volatility forecast. Optional `--forecast-volatility` is only an explicit assumption for the future variance-spread scenario; it is not required for percentile/rank or present-close arithmetic. IV-only monetary sensitivities are USD, separate from dimensionless historical position and variance units.
+
+### Collection and logging for IV research
+
+Collect the target call neighborhood and ATM reference at a consistent daily point,
+including no-entry days. Recompute context before each requested trade review from
+its latest separate quote and prior history. Daily statistical sampling and intraday
+holding-risk observation have different purposes. Daily samples cannot prove intraday
+trigger paths. The command runs on demand and installs no automation.
+
+Retain raw IV/unit labels and source-unit evidence in existing canonical raw captures,
+with normalized IV/unit, contract, Delta, spot, bid/ask, quote/Greek/spot source clocks,
+capture time and record time. Record IV model/basis/annualization and Vega unit evidence
+when supplied; keep absent fields unknown. Unlabelled browser IV requires verified
+unit mapping in a future adapter; this report does not relabel historical data.
+
+Export JSON under ignored `private/` to retain method/version, cutoff, parameters,
+daily evidence IDs, exclusions, sample denominator, assumptions and limits. Link that
+file from the existing review observation when archiving; no second quote ledger is
+needed. Actual fills still need decision/policy links, total fees and response times
+for later paired studies. The IV report does not reconstruct those missing facts.

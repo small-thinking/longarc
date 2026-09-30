@@ -44,6 +44,18 @@ and Markdown without changing the database. See [analysis reports](docs/analysis
 for commands, selection rules, units and limits. These are on-demand reports, not
 automatic candidate selection or validated return forecasts.
 
+`options iv-history` adds a source-isolated, daily call-IV distribution around an
+explicit DTE/Delta target. It reports sample counts, IV percentile/rank, missing
+units/timestamps, and optional forecast-variance and IV-only Vega scenarios.
+The covered-call review skill routes this context into entry and holding reviews
+as optional evidence after policy checks; current ask-based closes need no forecast.
+Monetary scenarios are USD only. The review procedure supports explicitly adopted
+heuristic weights and distribution-shift research; automatic multi-factor scoring,
+shift detection and weight learning are not implemented or calibrated.
+Historical IV position is not a volatility risk premium or expected profit.
+See [IV research](docs/analysis-reports.md#saved-iv-context-and-explicit-scenarios)
+for assumptions, logging inputs and collection cadence.
+
 ## Holding tracking
 
 Multiple short-call opening lots can each retain repeated price/Greek snapshots without trading. See [holding tracking and schema](docs/holding-tracking.md). The original holding tables remain provisional. The separate execution journal matches recorded closes to openings and reports remaining recorded quantities; it still requires fresh broker reconciliation.

@@ -11,6 +11,7 @@ from longarc.analytics.cost_journal import estimate_and_log
 from longarc.analytics.decisions import decide_and_log
 from longarc.analytics.executions import performance, record_execution
 from longarc.analytics.history import build_report, render_markdown
+from longarc.analytics.iv_cli import add_parser as add_iv_parser
 from longarc.analytics.replay import replay_and_log
 from longarc.analytics.report_cli import add_parsers
 from longarc.analytics.research import estimate_history, render_estimate
@@ -87,6 +88,7 @@ def add_parser(subparsers: Any) -> None:
         "options", help="Capture ingestion, sparse history, cost estimates")
     commands = parser.add_subparsers(dest="options_command", required=True)
     add_parsers(commands)
+    add_iv_parser(commands)
     for name in ("ingest", "history", "costs", "decide", "execution-add", "performance",
                  "replay", "estimate"):
         command = commands.add_parser(name)

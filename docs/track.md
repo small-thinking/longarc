@@ -10,17 +10,42 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-30 — Quantifiable saved IV context
+
+- Added read-only `options iv-history` with one target sample per date, explicit
+  source/unit/timing exclusions and knowledge-cutoff handling. Reports expose
+  comparable sample counts, IV percentile/rank and exact selected quote evidence.
+- Separate relative IV context from optional caller-assumed variance-spread and
+  IV-only Vega-dollar scenarios; none establishes expected profit or policy approval.
+- Documented consistent daily sampling, on-demand recalculation, and source/units/
+  forecast provenance needed for future collection. Existing raw records remain intact.
+- Routed the existing skill/runbook through IV context on requested reviews, with
+  policy gates/exits first, no calibrated IV weight and USD-only monetary scenarios.
+  Clarified that present ask-based BTC calculations do not need a future forecast.
+- Documented explicitly adopted, versioned heuristic weights, normalized/missing
+  components, common-benchmark limitations and distribution-shift research. No
+  automatic score, detector or learned model was added; current selection/exit rules
+  remain separate and profitable-outcome correlation is still an untested hypothesis.
+  Skill-format/link and diff checks cover this documentation follow-up.
+- Database changes: none; no migrations, scheduler, broker operations or policy edits.
+- Validation: 349 combined Python tests after integrating merged #25/#26, 9 browser-bridge tests, Ruff, mypy and governance
+  passed. Synthetic unit/sign scenarios and actual saved-data missing-input reports
+  were checked; these validate calculations, not trading effectiveness.
+- Published as [PR #27](https://github.com/small-thinking/longarc/pull/27); see the linked PR for current merge status. Integration retains the merged #25/#26 policy and skill guidance.
+  Next: verify source IV semantics/timestamps
+  and collect a comparable history; real forward-RV forecasts remain future work.
+
 ### 2026-09-24 — QQQ profit-pace exit rule
 
 - The active QQQ policy now uses one BTC profit trigger: captured premium must exceed 50% and the elapsed fraction of the current leg's lifetime. The old fixed 60% rule no longer applies to new QQQ decisions. Replay passes its actual simulated leg opening time to the shared decision rules; missing live opening time leaves the pace condition unknown.
 - Risk exits still take priority, and a profit exit still requires positive fee-adjusted P&L. This is a management heuristic, not an established optimal exit or a broker order. Older stored QQQ policies and IAU retain their historical fixed/additive semantics; no records are rewritten. No database schema change or migration.
-- Validation: 328 Python tests, Ruff, mypy and governance passed. [PR #26](https://github.com/small-thinking/longarc/pull/26) is a narrow follow-up to #25.
+- Validation: 328 Python tests, Ruff, mypy and governance passed. [PR #26](https://github.com/small-thinking/longarc/pull/26) merged into main on 2026-09-30 after its prerequisite #25.
 
 ### 2026-09-24 — Explicit current QQQ profit policy
 
 - The skill now selects the current private QQQ decision policy instead of a dated review copy. The policy can specify a strict gross premium capture comparison while preserving the existing positive fee-adjusted P&L check and all risk exits.
 - Historical decisions and other symbol policies retain their stored parameters; no broker action, database schema change or migration. Current private values remain outside Git.
-- Validation: 324 Python tests, targeted decision boundary test, Ruff, mypy and governance passed. [PR #25](https://github.com/small-thinking/longarc/pull/25) open; market quote/source-time and issuer dividend evidence remain separate eligibility gates.
+- Validation: 324 Python tests, targeted decision boundary test, Ruff, mypy and governance passed. [PR #25](https://github.com/small-thinking/longarc/pull/25) merged on 2026-09-30; market quote/source-time and issuer dividend evidence remain separate eligibility gates.
 
 ### 2026-09-21 — Repeatable data audit, candidate and position reports
 
