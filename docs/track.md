@@ -23,7 +23,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - Validation: 344 Python tests, 9 browser-bridge tests, Ruff, mypy and governance
   passed. Synthetic unit/sign scenarios and actual saved-data missing-input reports
   were checked; these validate calculations, not trading effectiveness.
-- PR publication pending; unmerged. Next: verify source IV semantics/timestamps
+- Published as [PR #27](https://github.com/small-thinking/longarc/pull/27); unmerged.
+  Next: verify source IV semantics/timestamps
   and collect a comparable history; real forward-RV forecasts remain future work.
 
 ### 2026-09-21 — Repeatable data audit, candidate and position reports
