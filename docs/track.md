@@ -10,6 +10,22 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-09-30 — Quantifiable saved IV context
+
+- Added read-only `options iv-history` with one target sample per date, explicit
+  source/unit/timing exclusions and knowledge-cutoff handling. Reports expose
+  comparable sample counts, IV percentile/rank and exact selected quote evidence.
+- Separate relative IV context from optional caller-assumed variance-spread and
+  IV-only Vega-dollar scenarios; none establishes expected profit or policy approval.
+- Documented consistent daily sampling, on-demand recalculation, and source/units/
+  forecast provenance needed for future collection. Existing raw records remain intact.
+- Database changes: none; no migrations, scheduler, broker operations or policy edits.
+- Validation: 344 Python tests, 9 browser-bridge tests, Ruff, mypy and governance
+  passed. Synthetic unit/sign scenarios and actual saved-data missing-input reports
+  were checked; these validate calculations, not trading effectiveness.
+- PR publication pending; unmerged. Next: verify source IV semantics/timestamps
+  and collect a comparable history; real forward-RV forecasts remain future work.
+
 ### 2026-09-21 — Repeatable data audit, candidate and position reports
 
 - Added three read-only CLI reports: data inventory/quality, same-batch candidate
