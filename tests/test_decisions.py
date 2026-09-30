@@ -57,6 +57,77 @@ def test_profit_boundary_fees_and_risk_priority(scenario, policy):
     assert evaluate(scenario, policy)["action"] == "BTC_RISK"
 
 
+def test_strict_profit_threshold_requires_more_than_sixty_percent(scenario, policy):
+    policy["policy_parameters"]["profit_capture_operator"] = ">"
+    scenario["facts"].update(bid_u=380000, ask_u=400000)
+    result = evaluate(scenario, policy)
+    assert result["action"] == "HOLD"
+    assert result["checks"]["profit_exit"] is False
+    scenario["facts"].update(bid_u=370000, ask_u=390000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"]["opening_premium_u"] = None
+    assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
+
+
+def test_early_profit_pace_is_strict_and_requires_actual_open_time(scenario, policy):
+    policy["policy_parameters"].update(
+        profit_capture_operator=">", profit_pace_min_capture_fraction=.5)
+    scenario["as_of"] = "2026-09-22T19:00:00Z"
+    scenario["facts"]["opening_executed_at"] = "2026-09-21T19:00:00Z"
+    scenario["facts"].update(bid_u=480000, ask_u=500000)
+    assert evaluate(scenario, policy)["action"] == "HOLD"  # Exactly 50% is not enough.
+    scenario["facts"].update(bid_u=470000, ask_u=490000)
+    result = evaluate(scenario, policy)
+    assert result["action"] == "BTC_PROFIT"
+    assert result["checks"]["profit_pace_reached"] is True
+    scenario["facts"].pop("opening_executed_at")
+    assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
+    scenario["facts"]["delta"] = .32
+    assert evaluate(scenario, policy)["action"] == "BTC_RISK"
+
+
+def test_historical_additional_pace_keeps_fixed_fallback(scenario, policy):
+    policy["policy_parameters"].update(
+        profit_capture_fraction=.9, profit_capture_operator=">",
+        profit_pace_min_capture_fraction=.5, latest_exit_dte=0)
+    scenario["facts"]["opening_executed_at"] = "2026-09-21T20:00:00Z"
+    scenario["as_of"] = "2026-10-10T14:00:00Z"  # 75% of 25 calendar days.
+    scenario["facts"].update(bid_u=240000, ask_u=250000)
+    result = evaluate(scenario, policy)
+    assert result["metrics"]["profit_pace_elapsed_fraction"] == "0.75"
+    assert result["checks"]["profit_pace_reached"] is False
+    scenario["facts"].update(bid_u=230000, ask_u=240000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"].pop("opening_executed_at")
+    policy["policy_parameters"]["profit_capture_fraction"] = .6
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+
+
+def test_pace_only_replaces_fixed_threshold_at_fifty_and_seventy_five(scenario, policy):
+    policy["policy_parameters"].update(
+        profit_pace_mode="only", profit_pace_min_capture_fraction=.5,
+        latest_exit_dte=0)
+    scenario["facts"]["opening_executed_at"] = "2026-10-02T18:00:00Z"
+    scenario["as_of"] = "2026-10-09T19:00:00Z"  # Halfway to Oct. 16, 16:00 ET.
+    scenario["facts"].update(bid_u=480000, ask_u=500000)
+    assert evaluate(scenario, policy)["action"] == "HOLD"  # Exactly 50% capture.
+    scenario["facts"].update(bid_u=470000, ask_u=490000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"]["opening_executed_at"] = "2026-09-21T20:00:00Z"
+    scenario["as_of"] = "2026-10-10T14:00:00Z"  # 75% of 25 calendar days.
+    scenario["facts"].update(bid_u=330000, ask_u=350000)  # 65% capture.
+    assert evaluate(scenario, policy)["action"] == "HOLD"  # Old fixed 60% is ignored.
+    scenario["facts"].update(bid_u=230000, ask_u=250000)
+    assert evaluate(scenario, policy)["action"] == "HOLD"  # Exactly 75% pace.
+    scenario["facts"].update(bid_u=220000, ask_u=240000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    policy["policy_parameters"].pop("profit_capture_fraction")
+    policy["policy_parameters"].pop("profit_capture_operator", None)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"].pop("opening_executed_at")
+    assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
+
+
 @pytest.mark.parametrize("field,value", [("dividend_window_clear", None), ("orders_clear", False),
                                         ("coverage_verified", False), ("greeks_usable", False)])
 def test_critical_unknowns_and_failed_checks_block_hold(scenario, policy, field, value):

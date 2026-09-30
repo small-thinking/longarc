@@ -14,6 +14,17 @@ distinguish source absence, access failure, not applicable and not attempted.
 Recompute candidate expiry coverage each run, retain held/research obligations,
 and persist attempt evidence alongside canonical quotes. A checklist is not a
 policy pass: keep partial calculations and unresolved trading checks separate.
+For QQQ decisions, load the current private policy JSON at
+`private/qqq-covered-call-plan/decision-policy.json`; dated review policies are
+historical evidence and must not replace the current rule. The policy defines
+the active profit-exit mode and threshold; calculate gross capture from the
+current ask and actual opening premium, with positive fee-adjusted P&L required.
+If the QQQ policy enables the pace-only profit trigger, use the actual
+current-leg STO execution time and the expiry date (16:00 New York planning
+cutoff). Report gross premium capture and elapsed lifetime separately; an
+unknown opening time makes the pace trigger unknown, not satisfied. The fixed
+profit threshold belongs only to policies that select it; risk exits remain
+independent and take priority.
 
 ## Read-only covered-call analysis
 
