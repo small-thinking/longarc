@@ -14,6 +14,11 @@ distinguish source absence, access failure, not applicable and not attempted.
 Recompute candidate expiry coverage each run, retain held/research obligations,
 and persist attempt evidence alongside canonical quotes. A checklist is not a
 policy pass: keep partial calculations and unresolved trading checks separate.
+For QQQ decisions, load the current private policy JSON at
+`private/qqq-covered-call-plan/decision-policy.json`; dated review policies are
+historical evidence and must not replace the current rule. The policy defines
+profit capture and its comparison operator; calculate from the current ask and
+the actual opening premium, with positive fee-adjusted P&L still required.
 
 ## Read-only covered-call analysis
 

@@ -57,6 +57,18 @@ def test_profit_boundary_fees_and_risk_priority(scenario, policy):
     assert evaluate(scenario, policy)["action"] == "BTC_RISK"
 
 
+def test_strict_profit_threshold_requires_more_than_sixty_percent(scenario, policy):
+    policy["policy_parameters"]["profit_capture_operator"] = ">"
+    scenario["facts"].update(bid_u=380000, ask_u=400000)
+    result = evaluate(scenario, policy)
+    assert result["action"] == "HOLD"
+    assert result["checks"]["profit_exit"] is False
+    scenario["facts"].update(bid_u=370000, ask_u=390000)
+    assert evaluate(scenario, policy)["action"] == "BTC_PROFIT"
+    scenario["facts"]["opening_premium_u"] = None
+    assert evaluate(scenario, policy)["action"] == "INSUFFICIENT_DATA"
+
+
 @pytest.mark.parametrize("field,value", [("dividend_window_clear", None), ("orders_clear", False),
                                         ("coverage_verified", False), ("greeks_usable", False)])
 def test_critical_unknowns_and_failed_checks_block_hold(scenario, policy, field, value):
