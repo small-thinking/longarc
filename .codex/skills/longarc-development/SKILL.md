@@ -21,6 +21,8 @@ For a user-requested account/chain review or dry run, first read the existing pr
 
 Every candidate recommendation must follow the runbook's [required recommendation fields](../../../docs/schwab-readonly.md#required-recommendation-fields), including strike distance and provider touch/OTM probabilities. Separate candidate selection from the current action recommendation and unresolved entry checks.
 
+For each entry or holding review, follow the runbook's [IV context procedure](../../../docs/schwab-readonly.md#iv-context-in-entry-and-holding-reviews). After current facts and policy checks, use `options iv-history` with explicit symbol, source and as-of cutoff when available. Resolve tool availability from the private context; an unavailable command or insufficient comparable history must be reported, never replaced with invented statistics. IV percentile is optional context under the current policy, not a calibrated trade weight or an override of coverage, liquidity, calendar or exit rules. Present-close cost uses the current ask and known fills/fees; forecasting is required only for claims about future expected results, not for this calculation. Monetary scenarios are USD only. This procedure does not enable orders or new schedules.
+
 ## Consolidation
 
 Update the existing file that owns new information. Prefer the private context/policy for personal decisions, the runbook for browser procedures, and `docs/track.md` for high-level progress. Create a new file only when existing files cannot reasonably serve the purpose; do not create a new context, handoff, skill, or progress log for each session. Replace superseded active guidance and retain only useful provenance or concise change history.

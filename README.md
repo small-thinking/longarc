@@ -47,6 +47,9 @@ automatic candidate selection or validated return forecasts.
 `options iv-history` adds a source-isolated, daily call-IV distribution around an
 explicit DTE/Delta target. It reports sample counts, IV percentile/rank, missing
 units/timestamps, and optional forecast-variance and IV-only Vega scenarios.
+The covered-call review skill routes this context into entry and holding reviews
+as optional evidence after policy checks; current ask-based closes need no forecast.
+Monetary scenarios are USD only; no IV decision weight has been calibrated.
 Historical IV position is not a volatility risk premium or expected profit.
 See [IV research](docs/analysis-reports.md#saved-iv-context-and-explicit-scenarios)
 for assumptions, logging inputs and collection cadence.

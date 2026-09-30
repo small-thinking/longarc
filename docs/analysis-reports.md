@@ -209,6 +209,10 @@ slippage are excluded. Larger moves need model repricing because Vega changes.
 Without `--reference-iv`, prior median is a scenario reference only after the
 sample guard passes; it is not a forecast. Provider Vega units are never inferred.
 
+### Decision use and present-close calculations
+
+Follow the [entry and holding review procedure](schwab-readonly.md#iv-context-in-entry-and-holding-reviews) when using this report. Percentile is optional historical context, with no calibrated weight or new policy threshold. Current ask-based BTC cost/P&L needs no forward volatility forecast. Optional `--forecast-volatility` is only an explicit assumption for the future variance-spread scenario; it is not required for percentile/rank or present-close arithmetic. IV-only monetary sensitivities are USD, separate from dimensionless historical position and variance units.
+
 ### Collection and logging for IV research
 
 Collect the target call neighborhood and ATM reference at a consistent daily point,

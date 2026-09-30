@@ -19,6 +19,10 @@ SQLite was selected and the local observation storage slice is implemented. The 
   IV-only Vega-dollar scenarios; none establishes expected profit or policy approval.
 - Documented consistent daily sampling, on-demand recalculation, and source/units/
   forecast provenance needed for future collection. Existing raw records remain intact.
+- Routed the existing skill/runbook through IV context on requested reviews, with
+  policy gates/exits first, no calibrated IV weight and USD-only monetary scenarios.
+  Clarified that present ask-based BTC calculations do not need a future forecast.
+  Skill-format/link and diff checks cover this documentation follow-up.
 - Database changes: none; no migrations, scheduler, broker operations or policy edits.
 - Validation: 344 Python tests, 9 browser-bridge tests, Ruff, mypy and governance
   passed. Synthetic unit/sign scenarios and actual saved-data missing-input reports
