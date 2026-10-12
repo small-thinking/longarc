@@ -39,7 +39,13 @@ Save credentials/tokens only in ignored private files, never chat or Git. Prefer
 opening a fresh OAuth URL; the listener exchanges callbacks immediately and
 stops after one completed callback. The user handles browser certificate warnings;
 do not bypass them or change broader certificate trust automatically. The
-`schwab` CLI writes raw snapshots and has no order-write or preview commands.
+review client and ordinary snapshot commands remain GET-only. Separate
+[order commands](../../../docs/schwab-orders.md) default to local plans with no
+OAuth or broker request. Implementing or testing this capability does not enable
+trading: ordinary and scheduled reviews never invoke live preview, submission,
+replacement or cancellation. Use the optional order procedure only for an
+explicitly requested order workflow; its default-disabled profile, exact request
+digest, fresh preflight and reconciliation gates remain separate from analysis.
 Prefer API account/quote/chain reads for ordinary reviews. Use `schwab ingest-chain`
 to map saved API chain/underlying snapshots into the canonical quote journal;
 retain source=schwab_api, exact source clocks and missing fields. Never send API
