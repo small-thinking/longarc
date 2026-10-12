@@ -1,6 +1,6 @@
 ---
 name: longarc-development
-description: Use for LongArc repository changes, local Schwab API setup and reads, or user-requested read-only covered-call analysis, including QQQ and IAU. Routes to the maintained runbook and preserves reviewable changes.
+description: Use for LongArc repository changes, local broker API setup and reads, or user-requested read-only covered-call analysis, including QQQ and IAU. Routes to the maintained runbook and preserves reviewable changes.
 ---
 
 # LongArc Development Skill
@@ -27,6 +27,25 @@ cutoff). Report gross premium capture and elapsed lifetime separately; an
 unknown opening time makes the pace trigger unknown, not satisfied. The fixed
 profit threshold belongs only to policies that select it; risk exits remain
 independent and take priority.
+
+## Named broker and account selection
+
+For E*TRADE or explicitly named multi-broker requests, use the shared
+[named broker workflow](../../../docs/brokers.md) and
+[E*TRADE contracts](../../../docs/etrade-readonly.md). Resolve the exact local
+profile from ignored `private/brokers.json`; never infer a login or first account.
+Keep credentials, tokens, account coverage, cash and ledger aliases separate.
+Ordinary reads and scheduled reviews never use order writes or previews.
+
+E*TRADE production and sandbox use separate keys; sandbox observations remain
+`etrade_sandbox_synthetic` shadow data. Do not present stored sandbox examples as
+current QQQ quotes. E*TRADE default Eastern-midnight expiry requires new owner
+consent; same-day renewal does not bypass that boundary. Preserve unknown IV
+units, contract terms and Greek clocks. Reuse existing canonical calculations
+and account-scoped reports; positions/averages are not reconciled fills.
+Existing Schwab setup and scheduled defaults remain compatible. Authentication
+setup alone does not require the trading collection checklist; broker analyses
+still use the checklist and private symbol policy below.
 
 ## Local Schwab API setup and reads
 

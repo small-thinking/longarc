@@ -10,6 +10,33 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-12 — Shared named broker/account access
+
+- Added one read-only `broker --profile` interface for Schwab and E*TRADE,
+  with separate login/environment credentials, exact account binding and optional
+  account-suffix checks. Account responses must match the pin; no index fallback.
+- E*TRADE OAuth 1.0a supports private verifier exchange, same-day inactivity
+  renewal and explicit Eastern-midnight reauthorization. GET clients retain
+  complete portfolio pages; expired sessions, repeated pages and HTTP errors stop.
+- Both providers reuse private JSON storage, market-field conversion, canonical
+  observation persistence and existing analytics. Legacy Schwab imports retain
+  their identity; sandbox records remain separate synthetic shadow observations.
+- Added maintained E*TRADE source contracts and shared command documentation,
+  including unknown IV units, independent quote clocks and unknown contract terms.
+- Database changes: none; no tables, columns, constraints, indexes or migration.
+  No added dependency, automatic fill reconciliation, E*TRADE order writes,
+  trading-policy change, schedule change or live order test.
+- Validation: 583 Python tests, 9 browser-bridge tests, Ruff, strict mypy,
+  governance and diff checks passed. The shared command also read the existing
+  authorized Schwab account's positions and underlying quotes successfully;
+  response identity and private permissions were checked. One owner-authorized
+  E*TRADE production login also passed account listing, exact ordinary-account
+  binding, positions, balance, quotes, expiries and one CALL-chain read. Canonical
+  import/readback and repeated-input idempotence passed; closing quotes and
+  missing units/terms remain explicit. Other login/environment authorization,
+  cross-day reauthorization and recurring operation remain live-unverified.
+- Publication: ready for review on `codex/multi-broker-accounts`; not merged.
+
 ### 2026-10-12 — Default-disabled order capability
 
 - Added separate CALL limit-order planning, broker preview, submit, exact-ID

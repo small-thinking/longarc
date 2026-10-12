@@ -120,6 +120,11 @@ class SchwabReadOnlyClient:
     def account_numbers(self) -> object:
         return self._get("/trader/v1/accounts/accountNumbers")
 
+    def account(self, account_hash: str) -> object:
+        if not _ACCOUNT_HASH.fullmatch(account_hash):
+            raise ValueError("Invalid account hash.")
+        return self._get(f"/trader/v1/accounts/{account_hash}", {"fields": "positions"})
+
     def transactions(self, account_hash: str, start_date: str, end_date: str) -> object:
         if not _ACCOUNT_HASH.fullmatch(account_hash):
             raise ValueError("Invalid account hash.")

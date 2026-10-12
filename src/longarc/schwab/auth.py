@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import secrets
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +12,15 @@ from typing import Callable
 from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import Request
 
+from longarc.core.private_files import (
+    PrivateFileError,
+)
+from longarc.core.private_files import (
+    read_private_json as shared_read_private_json,
+)
+from longarc.core.private_files import (
+    write_private_json as write_private_json,
+)
 from longarc.schwab.client import SchwabError, request_bytes
 
 AUTHORIZE_URL = "https://api.schwabapi.com/v1/oauth/authorize"
@@ -24,36 +31,16 @@ AUTHORIZATION_WAIT = 60 * 60
 Transport = Callable[[Request, float], bytes]
 
 
-def write_private_json(path: Path, payload: object, *, overwrite: bool = True) -> None:
-    """Replace a private file atomically; never make its contents world-readable."""
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd, temporary = tempfile.mkstemp(prefix=".schwab-", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w") as stream:
-            json.dump(payload, stream, indent=2, allow_nan=False)
-            stream.write("\n")
-        if overwrite:
-            os.replace(temporary, path)
-        else:
-            # Linking fails atomically if another file appeared at the destination.
-            os.link(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
-
-
 def read_private_json(path: Path) -> dict[str, object]:
+    """Preserve the Schwab error boundary around shared private-file storage."""
     try:
-        if path.stat().st_mode & 0o077:
-            raise SchwabError("Private Schwab file must have permissions 600.")
-        data = json.loads(path.read_text())
-    except (OSError, ValueError):
+        return shared_read_private_json(path)
+    except PrivateFileError as error:
+        if "permissions 600" in str(error):
+            raise SchwabError("Private Schwab file must have permissions 600.") from None
         raise SchwabError(
             "Cannot read private Schwab file; configure or authorize first."
         ) from None
-    if not isinstance(data, dict):
-        raise SchwabError("Invalid private Schwab file.")
-    return data
 
 
 def _text(data: dict[str, object], name: str) -> str:
