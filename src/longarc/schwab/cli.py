@@ -15,6 +15,7 @@ from longarc.schwab.auth import (
     read_private_json,
     write_private_json,
 )
+from longarc.schwab.callback import CallbackServer
 from longarc.schwab.client import SchwabError, SchwabReadOnlyClient
 
 
@@ -68,6 +69,24 @@ def _run(args: argparse.Namespace) -> int:
         print(json.dumps(result))
         return 0
     session = OAuthSession(directory)
+    if action == "auth-listen":
+        certfile = _private_path(Path(args.cert)) if args.cert else directory / "tls/cert.pem"
+        keyfile = _private_path(Path(args.key)) if args.key else directory / "tls/key.pem"
+        if keyfile.stat().st_mode & 0o077:
+            raise SchwabError("Local TLS private key must have permissions 600.")
+        # Bind and load TLS before issuing a new OAuth state or opening the browser.
+        with CallbackServer(session, certfile, keyfile) as callback:
+            url = session.start()
+            write_private_json(directory / "authorization.json", {"authorization_url": url})
+            print(f"HTTPS callback ready: {callback.ready_url}", flush=True)
+            print(
+                f"Authorization URL saved privately: {directory / 'authorization.json'}", flush=True
+            )
+            print("Review local certificate trust before starting Schwab login.", flush=True)
+            callback.run(timeout=args.timeout)
+        (directory / "authorization.json").unlink(missing_ok=True)
+        print("OAuth completed automatically; tokens saved privately.", flush=True)
+        return 0
     if action == "auth-start":
         url = session.start()
         path = directory / "authorization.json"
@@ -152,6 +171,16 @@ def add_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) 
     actions.add_parser("status", help="Show setup status without credentials or account data")
     actions.add_parser("auth-start", help="Prepare browser consent URL in a private file")
     actions.add_parser("auth-finish", help="Exchange redirected URL entered without echo")
+    listener = actions.add_parser(
+        "auth-listen", help="Receive HTTPS callback and exchange immediately"
+    )
+    listener.add_argument(
+        "--cert", help="Local TLS certificate (default: private directory/tls/cert.pem)"
+    )
+    listener.add_argument(
+        "--key", help="Local TLS private key (default: private directory/tls/key.pem)"
+    )
+    listener.add_argument("--timeout", type=float, default=3600, help="Bounded wait in seconds")
     for name in ("accounts", "account-numbers", "quotes", "chain", "transactions", "orders"):
         command = actions.add_parser(name, help=f"Save read-only {name} snapshot")
         command.add_argument("--output", help="Private JSON destination (default: dated snapshot)")

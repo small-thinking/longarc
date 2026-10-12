@@ -38,7 +38,12 @@ open-option marks. See [symbol contracts and compatibility](docs/calculations.md
 Trading Production and Market Data Production. It works with local Python;
 no mobile application or public website is needed. It can save balances,
 positions, account identifiers, trades, orders, quotes and call chains as private
-JSON snapshots. OAuth token refresh is automatic during a requested read; the
+JSON snapshots. A temporary HTTPS loopback listener receives the browser callback
+and immediately exchanges the authorization code; `schwab auth-listen` exposes a
+health check before login and stops after one completed callback. Local TLS
+certificate trust must be reviewed by the user; no system trust settings are
+changed automatically. Manual URL entry remains available as a fallback.
+OAuth token refresh is automatic during a requested read; the
 seven-day authorization grant still needs periodic browser consent. The local
 login/terms-review window allows one hour; exchange the returned code promptly
 because Schwab controls its separate lifetime.

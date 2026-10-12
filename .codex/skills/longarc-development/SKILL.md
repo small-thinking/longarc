@@ -33,7 +33,10 @@ For App registration, OAuth setup or requested API snapshots, follow
 One Developer Portal App can include both Accounts and Trading Production and
 Market Data Production; local Python does not require a mobile app. Use the exact
 registered local callback and order limit 0 for the current read-only workflow.
-Save credentials/tokens only in ignored private files, never chat or Git. The
+Save credentials/tokens only in ignored private files, never chat or Git. Prefer `schwab auth-listen` with local TLS and verify its health check before
+opening a fresh OAuth URL; the listener exchanges callbacks immediately and
+stops after one completed callback. The user handles browser certificate warnings;
+do not bypass them or change broader certificate trust automatically. The
 `schwab` CLI writes raw snapshots and has no order-write or preview commands.
 Do not treat raw API snapshots as canonical browser captures or reconciled fills.
 Account consent is a separate authorization step; Ready For Use is not consent.

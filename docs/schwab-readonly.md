@@ -28,10 +28,69 @@ secret; do not put credentials or a callback containing a code in shell argument
 ```bash
 uv run python -m longarc.cli schwab configure
 uv run python -m longarc.cli schwab status
+```
+
+If configured already, skip `configure`. Prefer the temporary HTTPS listener
+below so the returned authorization code is exchanged immediately instead of
+waiting for a chat response. App Key/Secret are API credentials, not brokerage
+login ID/password; broker passwords are not stored or submitted by this CLI.
+
+### HTTPS callback listener
+
+Use an existing local TLS certificate for IP `127.0.0.1` and its private key.
+The defaults are `private/schwab/tls/cert.pem` and `key.pem`. If none exist,
+OpenSSL can generate a local self-signed certificate without installing a root
+certificate or changing OS/browser trust. Do not replace an existing certificate
+while a listener is running:
+
+```bash
+umask 077
+mkdir -p private/schwab/tls
+cat > private/schwab/tls/openssl.cnf <<'EOF'
+[req]
+distinguished_name=dn
+x509_extensions=ext
+prompt=no
+[dn]
+CN=127.0.0.1
+[ext]
+subjectAltName=IP:127.0.0.1
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+EOF
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
+  -config private/schwab/tls/openssl.cnf \
+  -keyout private/schwab/tls/key.pem -out private/schwab/tls/cert.pem
+uv run python -m longarc.cli schwab auth-listen
+```
+
+Keep the command running. It binds only the registered `127.0.0.1` port with
+TLS 1.2 or later before generating a fresh OAuth URL. Visit
+`https://127.0.0.1:8182/health` (use the registered port if different) and verify
+`ready` before opening the `authorization_url` from
+`private/schwab/authorization.json`. The user must personally handle any browser
+certificate warning; do not bypass it, disable verification or install broader
+trust as an automated workaround. The local health check contains no account
+data or authorization code. It is distinct from Schwab's official login/consent.
+
+After the user completes Schwab login and consent, the local callback validates
+the Host, path, state and code, exchanges the code immediately, and shows static
+success/failure text. It never logs request URLs or renders credentials. Success
+saves tokens privately and closes the listener; failure also closes it, so inspect
+the terminal and start a fresh attempt rather than reusing the same code. A
+one-hour timeout and Ctrl-C close the listener; it is not a persistent service.
+If binding/TLS startup fails, no new OAuth attempt is started. Existing manual
+snapshots and ledger records are unchanged. Certificate trust, token exchange
+and real data reads are separate checks; `ready` proves only the local listener.
+
+### Manual callback fallback
+
+```bash
 uv run python -m longarc.cli schwab auth-start
 ```
 
-If configured already, skip `configure`. Open the `authorization_url` from
+Open the `authorization_url` from
 `private/schwab/authorization.json` in the browser. The user reviews Schwab's
 consent and selects accounts on Schwab's own page. Stop for required consent;
 do not infer authorization from an App being Ready For Use. After redirect,
@@ -46,7 +105,7 @@ uv run python -m longarc.cli schwab chain --symbol QQQ
 uv run python -m longarc.cli schwab chain --symbol IAU
 ```
 
-No local HTTPS server is needed for this manual flow. The callback can show a
+No local HTTPS server is needed for this manual fallback. The callback can show a
 connection error while the address bar contains the code; do not bypass browser
 certificate/security warnings. The client verifies the callback and single-use
 OAuth state before exchange. Start and finish within one hour; Schwab may impose
