@@ -23,7 +23,8 @@ integer; price must be a positive decimal string. The optional intent `tick`
 accepts `0.01` or `0.05`; it is an explicit input, not broker tick verification.
 Market/GTC/conditional/multi-leg orders, BTO and automated roll orders are rejected.
 Replacement preserves the contract and side and cannot exceed the observed
-remaining quantity. A replacement may create a new broker order ID.
+remaining quantity. Partially filled or unknown-fill targets cannot be replaced
+by this initial CLI workflow. A replacement may create a new broker order ID.
 
 ### Local example
 
@@ -105,8 +106,12 @@ The order query requests a 190-day window to cover Schwab's documented ordinary
 GTC lifetime of up to 180 days. Its response semantics and API range acceptance
 are **live-unverified**. Errors, >=3,000 returned rows, or unverified query coverage
 block submission; an empty array alone cannot prove account completeness.
-Sequential reads can still race with market/account changes. These checks are
-execution constraints, not a strategy recommendation or approval.
+Positions are refreshed after the order list/calendar reads. Quantity or identity
+changes during collection, a relevant terminal fill during the collection
+interval, or a missing fill clock stop submission for reconciliation. Price-only
+valuation changes are ignored. Market/account changes after the final read and
+provider propagation delays remain possible; these are execution constraints,
+not a guarantee, strategy recommendation or approval.
 
 ## Outcomes and recovery
 

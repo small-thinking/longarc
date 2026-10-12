@@ -107,6 +107,63 @@ def _pending_legs(orders: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return legs
 
 
+def check_collection_stability(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    orders: list[dict[str, Any]],
+    started_at: datetime,
+    underlying: str,
+) -> None:
+    """Stop on cross-read position changes or newly filled relevant orders."""
+
+    def quantities(account: dict[str, Any]) -> list[str]:
+        values = []
+        for position in _rows(account.get("positions")):
+            instrument = _object(position.get("instrument"))
+            values.append(
+                json.dumps(
+                    {
+                        "instrument": {
+                            key: instrument.get(key)
+                            for key in ("symbol", "assetType", "underlyingSymbol", "putCall")
+                        },
+                        "long": str(_decimal(position.get("longQuantity", 0))),
+                        "short": str(_decimal(position.get("shortQuantity"))),
+                    },
+                    sort_keys=True,
+                )
+            )
+        return sorted(values)
+
+    if quantities(before) != quantities(after):
+        raise SchwabError("Positions changed during preflight; collect and review again.")
+    for order in orders:
+        if "childOrderStrategies" in order:
+            check_collection_stability(
+                before, after, _rows(order["childOrderStrategies"]), started_at, underlying
+            )
+        if order.get("status") != "FILLED":
+            continue
+        relevant = False
+        for leg in _rows(order.get("orderLegCollection")):
+            instrument = _object(leg.get("instrument"))
+            symbol = instrument.get("symbol")
+            if not isinstance(symbol, str):
+                raise SchwabError("Filled order identity cannot be reconciled.")
+            relevant |= symbol == underlying or symbol[:6].strip() == underlying
+        if not relevant:
+            continue
+        closed = order.get("closeTime")
+        if not isinstance(closed, str):
+            raise SchwabError("Filled order clock missing; position reconciliation is required.")
+        try:
+            closed_at = datetime.fromisoformat(closed.replace("Z", "+00:00"))
+        except ValueError:
+            raise SchwabError("Filled order clock invalid; reconcile before submission.") from None
+        if closed_at.tzinfo is None or closed_at >= started_at:
+            raise SchwabError("An order filled during preflight; reconcile before submission.")
+
+
 def check_preflight(
     spec: dict[str, Any],
     account: dict[str, Any],
@@ -384,6 +441,7 @@ def run(args: argparse.Namespace) -> int:
         if profile.get("account_hash") is not None and account_hash != profile["account_hash"]:
             raise SchwabError("Selected account does not match the pinned trading profile.")
         client = SchwabOrderClient(token, account_hash, enabled=mutation)
+        preflight_started = datetime.now(UTC)
         result: dict[str, Any]
         if action == "order-status":
             assert isinstance(order_id, str)
@@ -404,6 +462,7 @@ def run(args: argparse.Namespace) -> int:
                     original = _object(prior.get("raw_order"))
                     old_legs = _rows(original.get("orderLegCollection"))
                     remaining = _object(prior.get("order")).get("remainingQuantity")
+                    filled = _object(prior.get("order")).get("filledQuantity")
                     new_leg = spec["orderLegCollection"][0]
                     if (
                         original.get("orderStrategyType") != "SINGLE"
@@ -412,9 +471,10 @@ def run(args: argparse.Namespace) -> int:
                         or _object(old_legs[0].get("instrument")).get("symbol")
                         != new_leg["instrument"]["symbol"]
                         or _decimal(remaining) < new_leg["quantity"]
+                        or filled != 0
                     ):
                         raise SchwabError(
-                            "Replacement must keep the same leg and fit remaining size."
+                            "Replace only an unfilled same-leg order within remaining size."
                         )
             if action in {"order-submit", "order-replace"}:
                 assert spec is not None
@@ -448,17 +508,40 @@ def run(args: argparse.Namespace) -> int:
                         raise SchwabError(
                             "Replacement target missing from the verified order list."
                         )
+                    if (
+                        targets[0].get("status") in _TERMINAL
+                        or targets[0].get("filledQuantity") != 0
+                        or _decimal(targets[0].get("remainingQuantity"))
+                        < spec["orderLegCollection"][0]["quantity"]
+                    ):
+                        raise SchwabError("Replacement target changed or partially filled.")
                     orders = [o for o in orders if str(o.get("orderId")) != order_id]
                 time.sleep(1)
                 calendar = _object(reads.market_hours(current.date().isoformat()))
+                time.sleep(1)
+                refreshed = _rows(reads.accounts())
+                refreshed_matches = [
+                    a["securitiesAccount"]
+                    for a in refreshed
+                    if _object(a.get("securitiesAccount")).get("accountNumber") == selected_number
+                ]
+                if len(refreshed_matches) != 1:
+                    raise SchwabError("Refreshed positions could not be matched.")
+                check_collection_stability(
+                    _object(matches[0]),
+                    _object(refreshed_matches[0]),
+                    orders,
+                    preflight_started,
+                    underlying,
+                )
                 preflight = check_preflight(
-                    spec, _object(matches[0]), orders, chain, calendar, datetime.now(UTC)
+                    spec, _object(refreshed_matches[0]), orders, chain, calendar, datetime.now(UTC)
                 )
                 write_private_json(
                     attempt_dir / "preflight.json",
                     {
                         "result": preflight,
-                        "account": matches[0],
+                        "account": refreshed_matches[0],
                         "orders": orders,
                         "chain": chain,
                         "calendar": calendar,

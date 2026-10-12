@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -340,6 +341,8 @@ def test_live_unknown_submit_persists_response_without_retry(
         def access_token(self) -> str:
             return "synthetic-token"
 
+    events: list[str] = []
+
     class Reads:
         def __init__(self, token: str) -> None:
             pass
@@ -348,7 +351,12 @@ def test_live_unknown_submit_persists_response_without_retry(
             return [{"hashValue": ACCOUNT_HASH, "accountNumber": "synthetic_number"}]
 
         def accounts(self) -> list[dict[str, Any]]:
-            return [{"securitiesAccount": account()}]
+            phase = "account_before" if "account_before" not in events else "account_after"
+            events.append(phase)
+            selected = account()
+            if phase == "account_after":
+                selected["positions"][0]["marketValue"] = 14_250
+            return [{"securitiesAccount": selected}]
 
         def option_chain(self, symbol: str) -> dict[str, Any]:
             assert symbol == "QQQ"
@@ -356,9 +364,11 @@ def test_live_unknown_submit_persists_response_without_retry(
 
         def orders(self, account_hash: str, start: str, end: str) -> list[dict[str, Any]]:
             assert account_hash == ACCOUNT_HASH
+            events.append("orders")
             return []
 
         def market_hours(self, day: str) -> dict[str, Any]:
+            events.append("calendar")
             return calendar()
 
     sends = 0
@@ -385,6 +395,7 @@ def test_live_unknown_submit_persists_response_without_retry(
     live = [*live_opts, "--live", "--attempt-id", "unknown-one", "--confirm-digest", digest]
     assert invoke("order-submit", options=live) == 1
     assert sends == 1
+    assert events == ["account_before", "orders", "calendar", "account_after"]
     saved = json.loads((directory / "orders/attempts/unknown-one/response.json").read_text())
     assert saved["outcome"] == "UNKNOWN" and saved["reconciliation_required"] is True
     result = json.loads((directory / "orders/attempts/unknown-one/result.json").read_text())
@@ -394,9 +405,10 @@ def test_live_unknown_submit_persists_response_without_retry(
 
 
 @pytest.mark.parametrize("other_pending", [False, True])
+@pytest.mark.parametrize("partial_stage", ["none", "prior", "list"])
 def test_live_replace_excludes_only_verified_target_reservation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str], other_pending: bool,
+    capsys: pytest.CaptureFixture[str], other_pending: bool, partial_stage: str,
 ) -> None:
     monkeypatch.chdir(tmp_path)
     directory = setup_private(tmp_path, profile=enabled_profile())
@@ -416,6 +428,8 @@ def test_live_replace_excludes_only_verified_target_reservation(
         def access_token(self) -> str:
             return "synthetic-token"
 
+    account_reads = 0
+
     class Reads:
         def __init__(self, token: str) -> None:
             pass
@@ -424,13 +438,16 @@ def test_live_replace_excludes_only_verified_target_reservation(
             return [{"hashValue": ACCOUNT_HASH, "accountNumber": "synthetic_number"}]
 
         def accounts(self) -> list[dict[str, Any]]:
+            nonlocal account_reads
+            account_reads += 1
             return [{"securitiesAccount": account(100)}]
 
         def option_chain(self, symbol: str) -> dict[str, Any]:
             return chain()
 
         def orders(self, account_hash: str, start: str, end: str) -> list[dict[str, Any]]:
-            target = {**pending("SELL_TO_OPEN"), "orderId": 12345}
+            target = {**pending("SELL_TO_OPEN"), "orderId": 12345,
+                      "filledQuantity": 1 if partial_stage == "list" else 0}
             return [target, *([{**pending("SELL_TO_OPEN"), "orderId": 12346}]
                              if other_pending else [])]
 
@@ -439,7 +456,8 @@ def test_live_replace_excludes_only_verified_target_reservation(
 
     replaced = 0
     prior = {"outcome": "OBSERVED", "order_id": "12345", "terminal": False,
-             "order": {"status": "WORKING", "remainingQuantity": 1},
+             "order": {"status": "WORKING", "remainingQuantity": 1,
+                       "filledQuantity": 1 if partial_stage == "prior" else 0},
              "raw_order": {"orderStrategyType": "SINGLE", "orderLegCollection": [
                  {"instruction": "SELL_TO_OPEN", "quantity": 1,
                   "instrument": {"assetType": "OPTION", "symbol": OPTION}}]}}
@@ -467,9 +485,11 @@ def test_live_replace_excludes_only_verified_target_reservation(
     live_opts = options_for("order-replace", output="private/schwab/replace-live.json")
     assert invoke("order-replace", options=[*live_opts, "--live", "--attempt-id",
                                             "replace-one", "--confirm-digest", digest]) == 1
-    assert replaced == (0 if other_pending else 1)
+    assert replaced == (1 if partial_stage == "none" and not other_pending else 0)
     assert (directory / "orders/attempts/replace-one/target-order.json").exists()
-    if other_pending:
+    assert account_reads == (0 if partial_stage == "prior" else
+                             1 if partial_stage == "list" else 2)
+    if other_pending or partial_stage != "none":
         assert not (directory / "orders/attempts/replace-one/request-started.json").exists()
     else:
         assert (directory / "orders/attempts/replace-one/request-started.json").exists()
@@ -599,3 +619,33 @@ def test_stale_quote_and_closed_session_fail() -> None:
         order_cli.check_preflight(spec(), account(), [], chain(quote_age=61), calendar(), NOW)
     with pytest.raises(SchwabError, match="regular equity session"):
         order_cli.check_preflight(spec(), account(), [], chain(), calendar(open_=False), NOW)
+
+
+def test_collection_stability_ignores_market_value_but_blocks_quantity_change() -> None:
+    before = account(100)
+    after = deepcopy(before)
+    after["positions"][0]["marketValue"] = 14_250
+    order_cli.check_collection_stability(before, after, [], NOW, "QQQ")
+    after["positions"][0]["longQuantity"] = 99
+    with pytest.raises(SchwabError, match="Positions changed"):
+        order_cli.check_collection_stability(before, after, [], NOW, "QQQ")
+
+
+@pytest.mark.parametrize("close_time,blocked", [
+    (NOW.isoformat(), True),
+    ((NOW - timedelta(seconds=1)).isoformat(), False),
+    (None, True),
+])
+def test_collection_stability_detects_latent_fill_with_unchanged_positions(
+    close_time: str | None, blocked: bool,
+) -> None:
+    filled = {"status": "FILLED", "orderLegCollection": [
+        {"instruction": "SELL_TO_OPEN", "quantity": 1,
+         "instrument": {"assetType": "OPTION", "symbol": OPTION}}]}
+    if close_time is not None:
+        filled["closeTime"] = close_time
+    if blocked:
+        with pytest.raises(SchwabError, match="filled|clock"):
+            order_cli.check_collection_stability(account(100), account(100), [filled], NOW, "QQQ")
+    else:
+        order_cli.check_collection_stability(account(100), account(100), [filled], NOW, "QQQ")

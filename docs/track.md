@@ -21,10 +21,12 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - Submission checks actual positions, standard deliverables, source quote age,
   cash and pending order reservations. Unverified open-order query coverage
   separately blocks submission; no default setting attests that it is complete.
+- Refreshed positions and intervening fill clocks detect cross-read changes;
+  uncertain or partially filled replacements stop for reconciliation.
 - No database migration, new dependency, actual fill, portal setting change,
   scheduled execution or live broker test. Current production entitlement and
   query completeness remain unverified; a far-OTM order may still execute.
-- Validation: 74 new synthetic transport/CLI/preflight tests; all 489 Python
+- Validation: 82 new synthetic transport/CLI/preflight tests; all 497 Python
   tests, 9 browser-bridge tests, Ruff, strict mypy, governance and diff checks
   passed. Actual CLI plan/submit/cancel dry runs also verified zero network
   without credentials; no fixture requires private account files.
