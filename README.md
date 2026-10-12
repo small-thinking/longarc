@@ -39,7 +39,9 @@ Trading Production and Market Data Production. It works with local Python;
 no mobile application or public website is needed. It can save balances,
 positions, account identifiers, trades, orders, quotes and call chains as private
 JSON snapshots. OAuth token refresh is automatic during a requested read; the
-seven-day authorization grant still needs periodic browser consent.
+seven-day authorization grant still needs periodic browser consent. The local
+login/terms-review window allows one hour; exchange the returned code promptly
+because Schwab controls its separate lifetime.
 
 Start with `uv run python -m longarc.cli schwab status` and follow
 [local setup and commands](docs/schwab-readonly.md#local-python-api-access).

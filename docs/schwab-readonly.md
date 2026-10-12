@@ -49,7 +49,8 @@ uv run python -m longarc.cli schwab chain --symbol IAU
 No local HTTPS server is needed for this manual flow. The callback can show a
 connection error while the address bar contains the code; do not bypass browser
 certificate/security warnings. The client verifies the callback and single-use
-OAuth state before exchange. Start and finish within 15 minutes. Tokens refresh
+OAuth state before exchange. Start and finish within one hour; Schwab may impose
+a shorter lifetime on the returned code, so exchange it promptly. Tokens refresh
 on demand after about 30 minutes; the original refresh grant expires after seven
 days and requires a new `auth-start`/`auth-finish`. Revoked tokens may expire sooner.
 The CLI has no autonomous login, scheduler or background process.

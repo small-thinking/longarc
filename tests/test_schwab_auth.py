@@ -107,9 +107,23 @@ def test_expired_authorization_rejected(tmp_path: Path) -> None:
     now = [1000.0]
     session = OAuthSession(tmp_path, clock=lambda: now[0])
     session.start()
-    now[0] += 901
+    now[0] += 3601
     with pytest.raises(SchwabError, match="expired"):
         session.finish("https://127.0.0.1:8182/?code=test&state=unused")
+
+
+def test_authorization_can_finish_after_reading_terms(tmp_path: Path) -> None:
+    app(tmp_path)
+    now = [1000.0]
+
+    def transport(request: Request, timeout: float) -> bytes:
+        return b'{"access_token":"test-access","refresh_token":"test-refresh","expires_in":1800}'
+
+    session = OAuthSession(tmp_path, transport=transport, clock=lambda: now[0])
+    state = parse_qs(urlsplit(session.start()).query)["state"][0]
+    now[0] += 21 * 60
+    session.finish("https://127.0.0.1:8182/?" + urlencode({"code": "code@", "state": state}))
+    assert session.access_token() == "test-access"
 
 
 def test_refresh_does_not_extend_original_grant(tmp_path: Path) -> None:

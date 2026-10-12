@@ -22,7 +22,9 @@ SQLite was selected and the local observation storage slice is implemented. The 
   confusing authentication with a trading-policy check or account reconciliation.
 - Database changes: none; no tables, columns, constraints, keys or indexes changed;
   no migration or rewrite of existing observations. No new dependency.
-- Validation: 375 Python tests, 9 browser bridge tests, Ruff, strict mypy and
+- The manual login/terms-review window allows one hour; callbacks still require
+  matching state, App identity and local URL, and Schwab enforces code validity.
+- Validation: 376 Python tests, 9 browser bridge tests, Ruff, strict mypy and
   governance passed. OAuth/transport tests use fixtures; live reads remain
   unverified until the user completes Schwab account consent. Published as
   [PR #28](https://github.com/small-thinking/longarc/pull/28); not merged.

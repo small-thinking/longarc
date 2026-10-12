@@ -20,6 +20,7 @@ AUTHORIZE_URL = "https://api.schwabapi.com/v1/oauth/authorize"
 TOKEN_URL = "https://api.schwabapi.com/v1/oauth/token"
 DEFAULT_REDIRECT = "https://127.0.0.1:8182"
 REFRESH_LIFETIME = 7 * 24 * 60 * 60
+AUTHORIZATION_WAIT = 60 * 60
 Transport = Callable[[Request, float], bytes]
 
 
@@ -143,7 +144,7 @@ class OAuthSession:
     def finish(self, redirect_url: str) -> None:
         pending = read_private_json(self.directory / "pending-auth.json")
         age = self.clock() - _number(pending, "created_at")
-        if not 0 <= age <= 15 * 60:
+        if not 0 <= age <= AUTHORIZATION_WAIT:
             raise SchwabError("Authorization attempt expired; run auth-start again.")
         if (
             pending.get("client_id") != self.config.client_id
