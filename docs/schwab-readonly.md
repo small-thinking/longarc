@@ -248,10 +248,14 @@ effect on a complete policy recommendation rather than filling missing values.
 ### API request pacing and limits
 
 An App's **order limit** is a trading-request throttle, not the total GET quota.
-The precise App-specific account/market read ceiling has not been verified from
-an accessible official quota statement. Do not present common third-party
-120-per-minute figures as this App's confirmed GET allowance, or load-test the
-broker to discover a ceiling.
+The authenticated [Accounts and Trading documentation](https://developer.schwab.com/products/trader-api--individual/details/documentation/Retail%20Trader%20API%20Production?docId=retail-trader-api-production--trader-api--individual--documentation)
+states that PUT/POST/DELETE order requests have a configurable zero-to-120 limit
+per minute per account, while GET order requests are unthrottled. This statement
+is specific to orders; it does not establish unlimited account/market-data reads.
+The precise App-specific account/market GET ceiling is still unverified. Do not
+present 120 per minute as this App's confirmed GET allowance or load-test the
+broker to discover a ceiling. The registered read-only App's order setting need
+not change to perform account/market GET reads.
 
 Use sequential resource reads with at least one second between requests, combine
 underlying symbols in one quote call, and fetch a chain once per symbol. Ordinary

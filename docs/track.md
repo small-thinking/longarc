@@ -21,6 +21,10 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - API GET quotas remain unverified; App order limits are a separate throttle.
   Normal reviews combine quotes and reuse one chain per symbol; HTTP 429 ends
   the affected read. Current scheduled cadence and trading policy are unchanged.
+- Authenticated official documentation verified the zero-to-120 per-minute,
+  per-account limit is for PUT/POST/DELETE order requests; GET order queries are
+  unthrottled by that setting. This does not establish unlimited market/account
+  GETs. No App settings were changed during this verification.
 - Database changes: none. No migration, broker fills, historical browser-data
   conversion, new dependency, order writes or unattended execution.
 - Validation: 388 Python tests, 9 browser-bridge tests, Ruff, strict mypy,

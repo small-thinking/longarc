@@ -77,7 +77,9 @@ quotes cannot replace execution history. Browser use remains available for OAuth
 renewal and explicit source comparisons. No automatic execution is enabled.
 
 Per-check collection uses a few sequential, combined reads rather than fetching
-again for each candidate. The exact App-specific GET ceiling is unverified;
+again for each candidate. Official zero-to-120 order limits apply to order-write
+requests per minute per account; GET order queries are unthrottled by that setting.
+The exact App-specific account/market GET ceiling is unverified;
 HTTP 429 stops that operation instead of triggering burst retries. See the
 [API-first procedure](docs/schwab-readonly.md#api-first-review-procedure).
 
