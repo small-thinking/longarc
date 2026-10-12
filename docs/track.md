@@ -27,7 +27,62 @@ SQLite was selected and the local observation storage slice is implemented. The 
   evidence and rate/yield assumptions remain private. Web/API agreement does not
   validate real-world probabilities or general error bounds.
 - Publication: [PR #29](https://github.com/small-thinking/longarc/pull/29) opened;
-  not merged. API setup continues independently in PR #28.
+  awaiting merge. API collection is available through merged PR #28.
+
+### 2026-10-12 — API-first covered-call collection
+
+- Updated the existing skill/runbook to prefer authorized API reads and reuse
+  local calculation/report commands. Browser reads are source comparisons or
+  fallbacks; skipped user-deferred checks remain explicitly unknown.
+- Added offline `schwab ingest-chain` for source-isolated canonical API quotes,
+  precise units/timestamps, raw-file hashes, original request coverage, readback
+  and idempotence. Added GET-only `schwab market-hours` with explicit date input.
+- API GET quotas remain unverified; App order limits are a separate throttle.
+  Normal reviews combine quotes and reuse one chain per symbol; HTTP 429 ends
+  the affected read. Current scheduled cadence and trading policy are unchanged.
+- Authenticated official documentation verified the zero-to-120 per-minute,
+  per-account limit is for PUT/POST/DELETE order requests; GET order queries are
+  unthrottled by that setting. This does not establish unlimited market/account
+  GETs. No App settings were changed during this verification.
+- Database changes: none. No migration, broker fills, historical browser-data
+  conversion, new dependency, order writes or unattended execution.
+- Validation: 388 Python tests, 9 browser-bridge tests, Ruff, strict mypy,
+  governance, diff and skill validation passed. Synthetic adapter tests also
+  passed in a temporary tree without private files. Live paced reads, separate
+  QQQ/IAU canonical imports, readback and the existing data-audit command passed;
+  repeated saved inputs reused their original observation across code revisions.
+- Updated the existing twice-per-day heartbeat to use this API-first procedure;
+  fetched-back prompt, schedule, status and destination were verified. No new
+  checking times or trade permissions. Full scheduled execution is not yet verified.
+- Publication: updated [PR #28](https://github.com/small-thinking/longarc/pull/28),
+  merged. Probability estimates continue in PR #29 and are
+  never provider values.
+
+### 2026-10-12 — Local Schwab read-only API client
+
+- Added local browser OAuth setup, private credential/token storage, state and
+  callback checks, on-demand access-token refresh, and explicit seven-day grant
+  expiry. One App can subscribe to both account and market-data products.
+- Added GET-only account balances/positions, account lookup, trades, orders,
+  quotes and call-chain snapshots with capture/query provenance. No order writes,
+  background scheduling or automatic database/ledger ingestion is included.
+- Updated the existing LongArc skill/runbook to route API setup and reads without
+  confusing authentication with a trading-policy check or account reconciliation.
+- Database changes: none; no tables, columns, constraints, keys or indexes changed;
+  no migration or rewrite of existing observations. No new dependency.
+- The manual login/terms-review window allows one hour; callbacks still require
+  matching state, App identity and local URL, and Schwab enforces code validity.
+- Added a one-use TLS loopback listener with a pre-login health check and immediate
+  callback exchange. It refuses wrong hosts/paths/states and emits no callback
+  request logs. User-managed certificate trust is separate from local readiness;
+  no OS trust changes or background schedules are added.
+- Validation: 379 Python tests, 9 browser bridge tests, Ruff, strict mypy and
+  governance passed. OAuth/transport tests use fixtures. Live user-completed
+  consent through the HTTPS listener produced tokens; account balances/positions,
+  QQQ/IAU quotes and both call chains were fetched successfully and retained
+  privately. This verifies those endpoints, not complete history or reconciliation.
+  Trade/order-history endpoints and subsequent token refresh remain live-unverified. Published as
+  [PR #28](https://github.com/small-thinking/longarc/pull/28); not merged.
 
 ### 2026-09-30 — Quantifiable saved IV context
 

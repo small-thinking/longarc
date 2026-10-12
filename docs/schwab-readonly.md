@@ -1,8 +1,152 @@
 # One-session Schwab read-only analysis
 
-Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. This runbook includes a repeatable browser-assisted collector; it is not an unattended service, scheduler or approved numerical strategy.
+Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. Daily reviews prefer authorized API reads and local scripts. Browser-assisted collection remains available for explicit web comparisons and evidence absent from the API. This runbook is not an unattended service, scheduler or approved numerical strategy.
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
+
+## Local Python API access
+
+Use `schwab` when the user requests local API setup or authorized account/market
+reads. API setup is distinct from a covered-call recommendation: the collection
+checklist and strategy gates below apply when those snapshots are used for an
+analysis, not when merely registering an App or checking authentication.
+
+Register one Developer Portal App with **Accounts and Trading Production** and
+**Market Data Production**. These can share one Client ID/Secret and one callback;
+the portal's Add Another control adds the second product to the same App.
+An App registration is an API client identity, not a mobile application. Use
+order limit `0` for the current read-only workflow. This is an order throttle,
+not a claim that Schwab provides a separate read-only OAuth permission.
+
+Use the exact registered callback (local default `https://127.0.0.1:8182`).
+Keep credentials, authorization URLs/codes, tokens and account/market snapshots
+under ignored `private/schwab/`; never put their contents in chat, logs, tests
+or Git. Files are written atomically with mode 600. This is private local file
+storage, not encryption or a system keychain. Setup prompts hide both ID and
+secret; do not put credentials or a callback containing a code in shell arguments.
+
+```bash
+uv run python -m longarc.cli schwab configure
+uv run python -m longarc.cli schwab status
+```
+
+If configured already, skip `configure`. Prefer the temporary HTTPS listener
+below so the returned authorization code is exchanged immediately instead of
+waiting for a chat response. App Key/Secret are API credentials, not brokerage
+login ID/password; broker passwords are not stored or submitted by this CLI.
+
+### HTTPS callback listener
+
+Use an existing local TLS certificate for IP `127.0.0.1` and its private key.
+The defaults are `private/schwab/tls/cert.pem` and `key.pem`. If none exist,
+OpenSSL can generate a local self-signed certificate without installing a root
+certificate or changing OS/browser trust. Do not replace an existing certificate
+while a listener is running:
+
+```bash
+umask 077
+mkdir -p private/schwab/tls
+cat > private/schwab/tls/openssl.cnf <<'EOF'
+[req]
+distinguished_name=dn
+x509_extensions=ext
+prompt=no
+[dn]
+CN=127.0.0.1
+[ext]
+subjectAltName=IP:127.0.0.1
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+EOF
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
+  -config private/schwab/tls/openssl.cnf \
+  -keyout private/schwab/tls/key.pem -out private/schwab/tls/cert.pem
+uv run python -m longarc.cli schwab auth-listen
+```
+
+Keep the command running. It binds only the registered `127.0.0.1` port with
+TLS 1.2 or later before generating a fresh OAuth URL. Visit
+`https://127.0.0.1:8182/health` (use the registered port if different) and verify
+`ready` before opening the `authorization_url` from
+`private/schwab/authorization.json`. The user must personally handle any browser
+certificate warning; do not bypass it, disable verification or install broader
+trust as an automated workaround. The local health check contains no account
+data or authorization code. It is distinct from Schwab's official login/consent.
+
+After the user completes Schwab login and consent, the local callback validates
+the Host, path, state and code, exchanges the code immediately, and shows static
+success/failure text. It never logs request URLs or renders credentials. Success
+saves tokens privately and closes the listener; failure also closes it, so inspect
+the terminal and start a fresh attempt rather than reusing the same code. A
+one-hour timeout and Ctrl-C close the listener; it is not a persistent service.
+If binding/TLS startup fails, no new OAuth attempt is started. Existing manual
+snapshots and ledger records are unchanged. Certificate trust, token exchange
+and real data reads are separate checks; `ready` proves only the local listener.
+
+### Manual callback fallback
+
+```bash
+uv run python -m longarc.cli schwab auth-start
+```
+
+Open the `authorization_url` from
+`private/schwab/authorization.json` in the browser. The user reviews Schwab's
+consent and selects accounts on Schwab's own page. Stop for required consent;
+do not infer authorization from an App being Ready For Use. After redirect,
+copy the complete local callback URL from the browser address bar and enter it
+at the hidden prompt:
+
+```bash
+uv run python -m longarc.cli schwab auth-finish
+uv run python -m longarc.cli schwab accounts
+uv run python -m longarc.cli schwab quotes --symbols QQQ IAU
+uv run python -m longarc.cli schwab chain --symbol QQQ
+uv run python -m longarc.cli schwab chain --symbol IAU
+```
+
+No local HTTPS server is needed for this manual fallback. The callback can show a
+connection error while the address bar contains the code; do not bypass browser
+certificate/security warnings. The client verifies the callback and single-use
+OAuth state before exchange. Start and finish within one hour; Schwab may impose
+a shorter lifetime on the returned code, so exchange it promptly. Tokens refresh
+on demand after about 30 minutes; the original refresh grant expires after seven
+days and requires a new `auth-start`/`auth-finish`. Revoked tokens may expire sooner.
+The CLI has no autonomous login, scheduler or background process.
+
+For account-specific trade/order history, first save `account-numbers` and inspect
+its private list to choose an explicit zero-based `--account-index`. Do not assume
+which account is intended. For example, once index 0 is confirmed:
+
+```bash
+uv run python -m longarc.cli schwab account-numbers
+uv run python -m longarc.cli schwab transactions --account-index 0 \
+  --start 2026-10-01T00:00:00Z --end 2026-10-12T23:59:59Z
+uv run python -m longarc.cli schwab orders --account-index 0 \
+  --start 2026-10-01T00:00:00Z --end 2026-10-12T23:59:59Z
+```
+
+Every read saves a raw JSON envelope with capture time, requested resource and
+query context under `private/schwab/snapshots/`; stdout reports only the path.
+`transactions` requests TRADE records; it is not a complete cash ledger. Orders
+are reads and are needed to reconcile outstanding obligations. Server history
+windows and response limits still apply: a single response is not proof of full
+history or account completeness. Chain retrieval currently requests calls for one
+underlying; provider delay, source timestamps, missing Greeks/probabilities and
+contract terms must be inspected before use. Capture time is not source quote time.
+
+`schwab ingest-chain` maps saved API chain and underlying-quote snapshots into
+the existing canonical quote journal, with API source identity, original file
+references/hashes, capture/source times and explicit missing fields. Do not pass
+raw API JSON directly to the browser importer or label it browser data. Account
+positions, orders and transactions remain raw evidence; no automatic execution
+reconciliation or verified fill import is implied.
+The data client exposes GET resource methods only and refuses redirects; no order
+placement, preview, replacement, cancellation or generic broker-write command exists.
+
+Official references: [Trader OAuth and local callbacks](https://developer.schwab.com/products/trader-api--individual/details/documentation/Retail%20Trader%20API%20Production?docId=retail-trader-api-production--trader-api--individual--documentation),
+[account API specification](https://developer.schwab.com/products/trader-api--individual/details/specifications/Retail%20Trader%20API%20Production),
+and [OAuth overview](https://developer.schwab.com/user-guides/get-started/authenticate-with-oauth).
 
 ## Multiple-symbol reviews
 
@@ -34,9 +178,94 @@ itself authorize a policy change, a trade, or a scheduled review.
 
 ## Before reading
 
+Use the API procedure below first for ordinary reviews. The browser-discovery
+step applies when a browser comparison or fallback is actually needed.
+
 1. Confirm the current checkout exposes the required CLI. The calculation implementation was merged in PR #14. An older checkout may still lack it. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
-2. Use the installed browser-use tool and its current instructions to locate the existing authorized Schwab tab. Discover tabs and page state afresh; never reuse tab IDs/selectors from an earlier session. Ordinary read-only navigation, expiry selectors and scrolling are sufficient. Do not click bid/ask trade buttons, order builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker.
+2. Only when a browser comparison or fallback is needed, use the installed browser-use tool to locate the current authorized Schwab tab. Discover tabs and state afresh; never reuse earlier tab IDs/selectors. Read-only navigation and research selectors are sufficient. Do not click trade builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker. An API-only review does not require a browser tab.
 3. Create a unique run identifier and explicit UTC capture start/end times. This is one user-requested run. No autonomous schedule, credentials storage or background monitoring is implied.
+
+## API-first review procedure
+
+Read the current private context and policy, check command availability, then
+collect each resource once per check and reuse it for all calculations:
+
+```bash
+uv run python -m longarc.cli schwab status
+uv run python -m longarc.cli schwab market-hours --date YYYY-MM-DD
+uv run python -m longarc.cli schwab accounts
+uv run python -m longarc.cli schwab quotes --symbols QQQ IAU
+uv run python -m longarc.cli schwab chain --symbol QQQ
+uv run python -m longarc.cli schwab chain --symbol IAU
+uv run python -m longarc.cli schwab ingest-chain --db private/longarc.sqlite3 \
+  --chain-file private/schwab/snapshots/CHAIN.json \
+  --quotes-file private/schwab/snapshots/QUOTES.json
+```
+
+Use the exact saved filenames and requested symbols; run one ingest per chain.
+For a QQQ-only check omit IAU from the quote/chain calls. The importer handles
+quote batches with both symbols but does not standardize positions or fills.
+Market-hours data identifies the relevant equity session; existing scheduled
+calendar rules may additionally require official exchange verification. A failed
+authentication read is a request for OAuth renewal, not a reason to open brokerage
+login pages for each subsequent check. Stop the affected read and report it once;
+do not restart consent automatically. Token refresh during reads is supported.
+
+Initialize the collection checklist before API collection too. Describe API
+resources/query windows in source references rather than browser tabs. Inspect
+delay flags, chain truncation, all held/watch obligations and candidate-expiry
+coverage. API quote clocks and trade clocks are distinct. There is no independent
+Greek calculation clock in the verified responses; keep `greeks_at` unknown.
+API success is not evidence that all trading-policy checks passed.
+
+Reconcile execution evidence when needed through the bounded account-numbers /
+transactions procedure above. A verified empty history response that disagrees
+with known fills is a source discrepancy, not proof of no trades. Reference the
+actual attempted snapshot/window; if not retried this run, record `not_attempted`
+and retain the unresolved prior gap. A trade-history read is separate from the
+user's deferred open-order check, and cannot be replaced by average position cost.
+
+Use `source=schwab_api` explicitly for saved quote/IV history. Keep older browser
+history separate because its IV units/clocks may differ. Reuse `data-audit`,
+`compare-candidates`, `decide`, `costs`, `performance`, `replay`, `estimate` and
+`iv-history`; compute only supported results and preserve per-rule unknowns.
+Do not turn position average cost or bid/ask into a confirmed execution.
+
+When `options probabilities` is present, run the separately documented
+[offline CALL model](https://github.com/small-thinking/longarc/pull/29)
+with explicit API input mapping and recorded rate/yield assumptions. If the
+active checkout lacks it, resolve the existing verified implementation from the
+private context or report the missing capability; do not merge another PR or
+substitute Delta automatically. Keep model probabilities/version/inputs separate
+from provider fields. Ordinary checks need no repeated web probability comparison.
+
+Respect explicitly deferred checks in the private context. Mark their collection
+items `not_attempted` with the user-requested reason; `orders_clear` and
+`dividend_window_clear` are still unknown, not true. Continue price/probability,
+cost and descriptive calculations that do not require those facts. Explain the
+effect on a complete policy recommendation rather than filling missing values.
+
+### API request pacing and limits
+
+An App's **order limit** is a trading-request throttle, not the total GET quota.
+The authenticated [Accounts and Trading documentation](https://developer.schwab.com/products/trader-api--individual/details/documentation/Retail%20Trader%20API%20Production?docId=retail-trader-api-production--trader-api--individual--documentation)
+states that PUT/POST/DELETE order requests have a configurable zero-to-120 limit
+per minute per account, while GET order requests are unthrottled. This statement
+is specific to orders; it does not establish unlimited account/market-data reads.
+The precise App-specific account/market GET ceiling is still unverified. Do not
+present 120 per minute as this App's confirmed GET allowance or load-test the
+broker to discover a ceiling. The registered read-only App's order setting need
+not change to perform account/market GET reads.
+
+Use sequential resource reads with at least one second between requests, combine
+underlying symbols in one quote call, and fetch a chain once per symbol. Ordinary
+QQQ/IAU checks need roughly four/five GET resource calls including the calendar;
+bounded history reconciliation can add account lookup and transaction calls.
+local ingestion, model probabilities, arithmetic and reports use no broker calls.
+Reuse the saved evidence rather than refetching per candidate. Existing scheduled
+checks keep their current cadence unless the user changes it. On HTTP 429, stop
+the affected operation, record the limit response, and retry at a later requested
+check; do not burst-retry, restart OAuth or change the App order limit.
 
 ## Required collection checklist
 
@@ -47,7 +276,7 @@ completeness, numerical calculability and policy eligibility are separate. Never
 turn an unavailable field into zero or a passed policy check. Existing risk evidence
 still takes priority over unrelated missing inputs.
 
-Before browsing, create a per-symbol checklist under the existing private run
+Before collecting, create a per-symbol checklist under the existing private run
 folder. Use the same run ID as the capture and report:
 
 ```bash
@@ -214,7 +443,7 @@ For every QQQ or IAU candidate, including a no-entry or research-only candidate,
 - Exact underlying, expiry, strike and call identity; bid/ask, Delta, and per-contract premium cash flow with the price basis, multiplier and fee treatment explicit.
 - Current observed underlying price and its source time, plus quote/Greek source times when available. Distinguish browser capture time from source time; label reused quotes with their original observation time.
 - Strike distance in dollars, `strike - underlying_price`, and percent, `100 * (strike - underlying_price) / underlying_price`, using that same observed price. Preserve the sign; call positive distance “above spot,” not a guaranteed safe buffer. If the underlying price is missing or unusable, keep both distances unknown.
-- **Probability of Touch** and **Probability of OTM**, copied from the provider with displayed units and source/capture timing. Always include both fields; display “unknown / not provided” and the reason when unavailable. Do not substitute Delta, `1 - Delta`, or a formula-derived value. These provider model estimates are not measured probabilities of strategy profit, avoiding a defensive buyback, or keeping the shares; do not silently reconcile them to Delta.
+- **Probability of Touch** and **Probability of OTM**: preserve provider values and units/source clocks when supplied. Otherwise show provider values as “unknown / not provided” and, when available, add separately labeled local model estimates with model version, inputs and assumptions. Never relabel estimates or Delta as provider values. Model or provider probabilities are not measured strategy-profit, defensive-buyback or share-retention probabilities.
 
 Keep a candidate comparison separate from the current action recommendation. State whether the candidate meets the verified entry requirements or remains `NO_ENTRY` / `INSUFFICIENT_DATA`, name outstanding facts, and show any suggested quantity separately from the theoretical share-coverage maximum. A preferred candidate alone is not a recommendation to place an order. Preserve the observed probabilities and missing fields in the existing capture records even if no trade occurs; never record a recommendation as a fill.
 

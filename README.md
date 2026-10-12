@@ -32,6 +32,57 @@ account totals plus `by_symbol`; `--symbol IAU` limits results to IAU. Reports s
 realized option P&L and remaining recorded contracts, not stock P&L or invented
 open-option marks. See [symbol contracts and compatibility](docs/calculations.md#symbol-scope-and-compatibility).
 
+## Local Schwab API access
+
+`schwab` supports one registered Developer Portal App with both Accounts and
+Trading Production and Market Data Production. It works with local Python;
+no mobile application or public website is needed. It can save balances,
+positions, account identifiers, trades, orders, quotes and call chains as private
+JSON snapshots. A temporary HTTPS loopback listener receives the browser callback
+and immediately exchanges the authorization code; `schwab auth-listen` exposes a
+health check before login and stops after one completed callback. Local TLS
+certificate trust must be reviewed by the user; no system trust settings are
+changed automatically. Manual URL entry remains available as a fallback.
+Live OAuth, account balances/positions, QQQ/IAU quotes and call-chain retrieval
+have been verified through the local listener. Snapshots remain raw provider
+responses; this does not establish complete account-history reconciliation.
+OAuth token refresh is automatic during a requested read; the
+seven-day authorization grant still needs periodic browser consent. The local
+login/terms-review window allows one hour; exchange the returned code promptly
+because Schwab controls its separate lifetime.
+
+Start with `uv run python -m longarc.cli schwab status` and follow
+[local setup and commands](docs/schwab-readonly.md#local-python-api-access).
+App credentials, OAuth URLs/tokens and real snapshots stay under ignored
+`private/` with owner-only file permissions. API resource calls are GET-only;
+OAuth token exchange is the only POST. No order entry, preview, modification,
+cancellation, background collection or automatic database ingestion is implemented.
+
+## API-first reviews
+
+The LongArc skill now prefers API account, quote and CALL-chain reads for ordinary
+reviews, followed by local calculations and reports. `schwab market-hours --date
+YYYY-MM-DD` reads the equity/option session calendar. `schwab ingest-chain --db
+PATH --chain-file FILE --quotes-file FILE` maps saved API responses into the
+existing canonical quote journal, verifies readback and reuses identical imports.
+Batched underlying quotes support separate QQQ/IAU imports. API source clocks,
+delay/truncation flags, IV fractions, contract terms and missing fields remain
+explicit; independent Greek timestamps and provider Touch/OTM are not invented.
+
+Use source `schwab_api` for quote/IV history and reuse the existing cost, decision,
+performance, replay and estimate commands. Local probability estimates remain
+separate research outputs from [PR #29](https://github.com/small-thinking/longarc/pull/29).
+Actual fills still require evidence and matching; position averages and market
+quotes cannot replace execution history. Browser use remains available for OAuth
+renewal and explicit source comparisons. No automatic execution is enabled.
+
+Per-check collection uses a few sequential, combined reads rather than fetching
+again for each candidate. Official zero-to-120 order limits apply to order-write
+requests per minute per account; GET order queries are unthrottled by that setting.
+The exact App-specific account/market GET ceiling is unverified;
+HTTP 429 stops that operation instead of triggering burst retries. See the
+[API-first procedure](docs/schwab-readonly.md#api-first-review-procedure).
+
 ## Read-only analysis reports
 
 `options data-audit` inventories records, quote coverage, missing fields and
