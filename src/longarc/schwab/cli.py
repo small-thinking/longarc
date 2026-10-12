@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import json
+import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from longarc.schwab.auth import (
     write_private_json,
 )
 from longarc.schwab.callback import CallbackServer
+from longarc.schwab.capture import ingest_chain
 from longarc.schwab.client import SchwabError, SchwabReadOnlyClient
 
 
@@ -27,6 +29,11 @@ def _private_path(path: Path) -> Path:
 
 
 def _run(args: argparse.Namespace) -> int:
+    action = args.schwab_action
+    if action == "ingest-chain":
+        receipt = ingest_chain(Path(args.db), Path(args.chain_file), Path(args.quotes_file))
+        print(json.dumps(receipt))
+        return 1 if receipt["status"] == "error" else 0
     directory = _private_path(Path(args.directory))
     requested_output = _private_path(Path(args.output)) if getattr(args, "output", None) else None
     if requested_output in {
@@ -41,7 +48,6 @@ def _run(args: argparse.Namespace) -> int:
         raise SchwabError("Snapshot output must not overwrite Schwab authorization files.")
     if requested_output and requested_output.exists():
         raise SchwabError("Snapshot output already exists; choose a new private file.")
-    action = args.schwab_action
     if action == "configure":
         config = AppConfig(
             getpass.getpass("App Client ID (hidden): ").strip(),
@@ -111,6 +117,8 @@ def _run(args: argparse.Namespace) -> int:
         data = client.quotes(args.symbols)
     elif action == "chain":
         data = client.option_chain(args.symbol)
+    elif action == "market-hours":
+        data = client.market_hours(args.date)
     else:
         numbers = client.account_numbers()
         index = args.account_index
@@ -135,7 +143,7 @@ def _run(args: argparse.Namespace) -> int:
             "resource": action,
             "request": {
                 name: getattr(args, name)
-                for name in ("symbols", "symbol", "start", "end", "account_index")
+                for name in ("symbols", "symbol", "start", "end", "date", "account_index")
                 if hasattr(args, name)
             },
             "data": data,
@@ -149,7 +157,8 @@ def _run(args: argparse.Namespace) -> int:
 def _handler(args: argparse.Namespace) -> int:
     try:
         return _run(args)
-    except (SchwabError, OSError, EOFError, ValueError) as error:
+    except (SchwabError, OSError, EOFError, ValueError, sqlite3.Error, KeyError,
+            TypeError) as error:
         # Do not emit raw exception chains, credentials or account response bodies.
         # SchwabError's messages are designed to be safe and actionable.
         print(
@@ -166,6 +175,10 @@ def add_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) 
         "--directory", default="private/schwab", help="Private credential directory"
     )
     actions = parser.add_subparsers(dest="schwab_action", required=True)
+    ingest = actions.add_parser("ingest-chain", help="Import saved API chain and quotes offline")
+    ingest.add_argument("--db", required=True, help="Initialized observation database")
+    ingest.add_argument("--chain-file", required=True, help="Saved Schwab API chain envelope")
+    ingest.add_argument("--quotes-file", required=True, help="Saved underlying-quotes envelope")
     config = actions.add_parser("configure", help="Enter App credentials without echo")
     config.add_argument("--callback", default=DEFAULT_REDIRECT)
     actions.add_parser("status", help="Show setup status without credentials or account data")
@@ -181,13 +194,16 @@ def add_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) 
         "--key", help="Local TLS private key (default: private directory/tls/key.pem)"
     )
     listener.add_argument("--timeout", type=float, default=3600, help="Bounded wait in seconds")
-    for name in ("accounts", "account-numbers", "quotes", "chain", "transactions", "orders"):
+    for name in ("accounts", "account-numbers", "quotes", "chain", "market-hours",
+                 "transactions", "orders"):
         command = actions.add_parser(name, help=f"Save read-only {name} snapshot")
         command.add_argument("--output", help="Private JSON destination (default: dated snapshot)")
         if name == "quotes":
             command.add_argument("--symbols", nargs="+", required=True)
         elif name == "chain":
             command.add_argument("--symbol", required=True)
+        elif name == "market-hours":
+            command.add_argument("--date", required=True, help="Market date YYYY-MM-DD")
         elif name in ("transactions", "orders"):
             command.add_argument(
                 "--account-index",

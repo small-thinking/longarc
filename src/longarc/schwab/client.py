@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Callable, Sequence, cast
 from urllib.error import HTTPError
 from urllib.parse import urlencode
@@ -66,6 +66,15 @@ def _date(value: str) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError("Transaction dates must include a timezone.")
     return parsed
+
+
+def _calendar_date(value: str) -> str:
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise ValueError("Market-hours date must be YYYY-MM-DD.")
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError as exc:
+        raise ValueError("Market-hours date must be a valid YYYY-MM-DD date.") from exc
 
 
 class SchwabReadOnlyClient:
@@ -140,4 +149,9 @@ class SchwabReadOnlyClient:
     def option_chain(self, symbol: str) -> object:
         return self._get(
             "/marketdata/v1/chains", {"symbol": _symbol(symbol), "contractType": "CALL"}
+        )
+
+    def market_hours(self, day: str) -> object:
+        return self._get(
+            "/marketdata/v1/markets", {"markets": "equity,option", "date": _calendar_date(day)}
         )

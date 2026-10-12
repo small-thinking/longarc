@@ -11,6 +11,8 @@ For every analysis, initialize and complete the runbook's [required collection
 checklist](../../../docs/schwab-readonly.md#required-collection-checklist), then run
 `scripts/collection_checklist.py` before reporting. Missing data is supported;
 distinguish source absence, access failure, not applicable and not attempted.
+Use the current context for explicitly deferred checks; record them as
+not_attempted with the reason rather than treating them as passed.
 Recompute candidate expiry coverage each run, retain held/research obligations,
 and persist attempt evidence alongside canonical quotes. A checklist is not a
 policy pass: keep partial calculations and unresolved trading checks separate.
@@ -38,7 +40,16 @@ opening a fresh OAuth URL; the listener exchanges callbacks immediately and
 stops after one completed callback. The user handles browser certificate warnings;
 do not bypass them or change broader certificate trust automatically. The
 `schwab` CLI writes raw snapshots and has no order-write or preview commands.
-Do not treat raw API snapshots as canonical browser captures or reconciled fills.
+Prefer API account/quote/chain reads for ordinary reviews. Use `schwab ingest-chain`
+to map saved API chain/underlying snapshots into the canonical quote journal;
+retain source=schwab_api, exact source clocks and missing fields. Never send API
+JSON through the browser importer or treat positions/quotes as reconciled fills.
+Run the existing arithmetic, history, decision and reporting tools on saved
+records. When `options probabilities` is available, compute separately labeled
+model estimates from explicit inputs; preserve provider probability fields.
+See the runbook for source mapping, command availability and API pacing.
+A rate-limit response ends the affected read; do not burst-retry or infer a
+provider quota from the App order-limit setting.
 Account consent is a separate authorization step; Ready For Use is not consent.
 Authentication-only setup does not require the trading collection checklist.
 When using snapshots for a covered-call recommendation, resume the analysis
@@ -46,9 +57,9 @@ procedure below, including policy, source freshness and missing-data checks.
 
 ## Read-only covered-call analysis
 
-For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). For QQQ, IAU or a combined review, resolve each exact symbol and its own policy from that context, then reuse the [same procedure](../../../docs/schwab-readonly.md#multiple-symbol-reviews). Pass the symbol explicitly to capture/history/research and match policy `scope.underlying` to decision/replay inputs. Old unscoped policies belong only to QQQ; do not infer IAU thresholds from a discussion of candidates. Coverage, episodes and results stay separate by asset; shared account cash is reconciled once. Paths are relative to the repository root unless linked otherwise. Use available browser tools for current page state and existing calculation tools for arithmetic. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
+For a user-requested account/chain review or dry run, first read the existing private context at `private/qqq-covered-call-plan/README.md`, then follow [the Schwab runbook](../../../docs/schwab-readonly.md). For QQQ, IAU or a combined review, resolve each exact symbol and its own policy from that context, then reuse the [same procedure](../../../docs/schwab-readonly.md#multiple-symbol-reviews). Pass the symbol explicitly to capture/history/research and match policy `scope.underlying` to decision/replay inputs. Old unscoped policies belong only to QQQ; do not infer IAU thresholds from a discussion of candidates. Coverage, episodes and results stay separate by asset; shared account cash is reconciled once. Paths are relative to the repository root unless linked otherwise. Use the authorized API for current account/market facts and existing calculation tools for arithmetic. Browser reads are a fallback for explicit web comparisons or missing API-only evidence, not a prerequisite for ordinary API reviews. Keep preferences and parameter decisions in the private context/policy; keep browser procedures in the runbook. This routing does not authorize trades or schedule future runs.
 
-Every candidate recommendation must follow the runbook's [required recommendation fields](../../../docs/schwab-readonly.md#required-recommendation-fields), including strike distance and provider touch/OTM probabilities. Separate candidate selection from the current action recommendation and unresolved entry checks.
+Every candidate recommendation must follow the runbook's [required recommendation fields](../../../docs/schwab-readonly.md#required-recommendation-fields), including strike distance and provider touch/OTM probabilities where supplied; show model probabilities separately with their version and assumptions. Missing provider probabilities stay unknown. Separate candidate selection from the current action recommendation and unresolved entry checks.
 
 For each entry or holding review, follow the runbook's [IV context procedure](../../../docs/schwab-readonly.md#iv-context-in-entry-and-holding-reviews). After current facts and policy checks, use `options iv-history` with explicit symbol, source and as-of cutoff when available. Resolve tool availability from the private context; an unavailable command or insufficient comparable history must be reported, never replaced with invented statistics. Use a heuristic weighting only when explicitly adopted in the private context, with its version, normalized component definitions and uncalibrated weights recorded. Missing components leave the total unknown; a common benchmark percentile cannot rank candidates within the same review. Monitor comparable short/long-window context for potential distribution shift; missing diagnostics stay unknown and do not prompt ad hoc reweighting. The score is not a calibrated trade probability or an override of coverage, liquidity, calendar, candidate-selection or exit rules. Present-close cost uses the current ask and known fills/fees; forecasting is required only for claims about future expected results, not for this calculation. Monetary scenarios are USD only. This procedure does not enable orders or new schedules.
 

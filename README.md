@@ -58,6 +58,29 @@ App credentials, OAuth URLs/tokens and real snapshots stay under ignored
 OAuth token exchange is the only POST. No order entry, preview, modification,
 cancellation, background collection or automatic database ingestion is implemented.
 
+## API-first reviews
+
+The LongArc skill now prefers API account, quote and CALL-chain reads for ordinary
+reviews, followed by local calculations and reports. `schwab market-hours --date
+YYYY-MM-DD` reads the equity/option session calendar. `schwab ingest-chain --db
+PATH --chain-file FILE --quotes-file FILE` maps saved API responses into the
+existing canonical quote journal, verifies readback and reuses identical imports.
+Batched underlying quotes support separate QQQ/IAU imports. API source clocks,
+delay/truncation flags, IV fractions, contract terms and missing fields remain
+explicit; independent Greek timestamps and provider Touch/OTM are not invented.
+
+Use source `schwab_api` for quote/IV history and reuse the existing cost, decision,
+performance, replay and estimate commands. Local probability estimates remain
+separate research outputs from [PR #29](https://github.com/small-thinking/longarc/pull/29).
+Actual fills still require evidence and matching; position averages and market
+quotes cannot replace execution history. Browser use remains available for OAuth
+renewal and explicit source comparisons. No automatic execution is enabled.
+
+Per-check collection uses a few sequential, combined reads rather than fetching
+again for each candidate. The exact App-specific GET ceiling is unverified;
+HTTP 429 stops that operation instead of triggering burst retries. See the
+[API-first procedure](docs/schwab-readonly.md#api-first-review-procedure).
+
 ## Read-only analysis reports
 
 `options data-audit` inventories records, quote coverage, missing fields and

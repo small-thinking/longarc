@@ -1,6 +1,6 @@
 # One-session Schwab read-only analysis
 
-Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. This runbook includes a repeatable browser-assisted collector; it is not an unattended service, scheduler or approved numerical strategy.
+Read `private/qqq-covered-call-plan/README.md` first for the user's current preferences and unresolved parameters. That private file is local, ignored by Git and absent from a fresh clone. If missing, report the missing context rather than importing old defaults. Daily reviews prefer authorized API reads and local scripts. Browser-assisted collection remains available for explicit web comparisons and evidence absent from the API. This runbook is not an unattended service, scheduler or approved numerical strategy.
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
 
@@ -135,10 +135,12 @@ history or account completeness. Chain retrieval currently requests calls for on
 underlying; provider delay, source timestamps, missing Greeks/probabilities and
 contract terms must be inspected before use. Capture time is not source quote time.
 
-These are raw snapshots, not an importer into the existing canonical quote/fill
-ledger. Do not pass them directly to the browser-capture importer, label their
-shape as browser data, or claim automatic reconciliation. Continue the existing
-analysis checks and use explicit field mapping when that integration is added.
+`schwab ingest-chain` maps saved API chain and underlying-quote snapshots into
+the existing canonical quote journal, with API source identity, original file
+references/hashes, capture/source times and explicit missing fields. Do not pass
+raw API JSON directly to the browser importer or label it browser data. Account
+positions, orders and transactions remain raw evidence; no automatic execution
+reconciliation or verified fill import is implied.
 The data client exposes GET resource methods only and refuses redirects; no order
 placement, preview, replacement, cancellation or generic broker-write command exists.
 
@@ -176,9 +178,90 @@ itself authorize a policy change, a trade, or a scheduled review.
 
 ## Before reading
 
+Use the API procedure below first for ordinary reviews. The browser-discovery
+step applies when a browser comparison or fallback is actually needed.
+
 1. Confirm the current checkout exposes the required CLI. The calculation implementation was merged in PR #14. An older checkout may still lack it. Run `uv run python -m longarc.cli --help`; `calc` documentation is `docs/calculations.md` in that implementation. Do not recreate missing functions or merge unrelated PRs automatically.
-2. Use the installed browser-use tool and its current instructions to locate the existing authorized Schwab tab. Discover tabs and page state afresh; never reuse tab IDs/selectors from an earlier session. Ordinary read-only navigation, expiry selectors and scrolling are sufficient. Do not click bid/ask trade buttons, order builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker.
+2. Only when a browser comparison or fallback is needed, use the installed browser-use tool to locate the current authorized Schwab tab. Discover tabs and state afresh; never reuse earlier tab IDs/selectors. Read-only navigation and research selectors are sufficient. Do not click trade builders, preview/submit/cancel controls, account settings, or extract cookies/tokens. If login or MFA requires user action, explain the blocker. An API-only review does not require a browser tab.
 3. Create a unique run identifier and explicit UTC capture start/end times. This is one user-requested run. No autonomous schedule, credentials storage or background monitoring is implied.
+
+## API-first review procedure
+
+Read the current private context and policy, check command availability, then
+collect each resource once per check and reuse it for all calculations:
+
+```bash
+uv run python -m longarc.cli schwab status
+uv run python -m longarc.cli schwab market-hours --date YYYY-MM-DD
+uv run python -m longarc.cli schwab accounts
+uv run python -m longarc.cli schwab quotes --symbols QQQ IAU
+uv run python -m longarc.cli schwab chain --symbol QQQ
+uv run python -m longarc.cli schwab chain --symbol IAU
+uv run python -m longarc.cli schwab ingest-chain --db private/longarc.sqlite3 \
+  --chain-file private/schwab/snapshots/CHAIN.json \
+  --quotes-file private/schwab/snapshots/QUOTES.json
+```
+
+Use the exact saved filenames and requested symbols; run one ingest per chain.
+For a QQQ-only check omit IAU from the quote/chain calls. The importer handles
+quote batches with both symbols but does not standardize positions or fills.
+Market-hours data identifies the relevant equity session; existing scheduled
+calendar rules may additionally require official exchange verification. A failed
+authentication read is a request for OAuth renewal, not a reason to open brokerage
+login pages for each subsequent check. Stop the affected read and report it once;
+do not restart consent automatically. Token refresh during reads is supported.
+
+Initialize the collection checklist before API collection too. Describe API
+resources/query windows in source references rather than browser tabs. Inspect
+delay flags, chain truncation, all held/watch obligations and candidate-expiry
+coverage. API quote clocks and trade clocks are distinct. There is no independent
+Greek calculation clock in the verified responses; keep `greeks_at` unknown.
+API success is not evidence that all trading-policy checks passed.
+
+Reconcile execution evidence when needed through the bounded account-numbers /
+transactions procedure above. A verified empty history response that disagrees
+with known fills is a source discrepancy, not proof of no trades. Reference the
+actual attempted snapshot/window; if not retried this run, record `not_attempted`
+and retain the unresolved prior gap. A trade-history read is separate from the
+user's deferred open-order check, and cannot be replaced by average position cost.
+
+Use `source=schwab_api` explicitly for saved quote/IV history. Keep older browser
+history separate because its IV units/clocks may differ. Reuse `data-audit`,
+`compare-candidates`, `decide`, `costs`, `performance`, `replay`, `estimate` and
+`iv-history`; compute only supported results and preserve per-rule unknowns.
+Do not turn position average cost or bid/ask into a confirmed execution.
+
+When `options probabilities` is present, run the separately documented
+[offline CALL model](https://github.com/small-thinking/longarc/pull/29)
+with explicit API input mapping and recorded rate/yield assumptions. If the
+active checkout lacks it, resolve the existing verified implementation from the
+private context or report the missing capability; do not merge another PR or
+substitute Delta automatically. Keep model probabilities/version/inputs separate
+from provider fields. Ordinary checks need no repeated web probability comparison.
+
+Respect explicitly deferred checks in the private context. Mark their collection
+items `not_attempted` with the user-requested reason; `orders_clear` and
+`dividend_window_clear` are still unknown, not true. Continue price/probability,
+cost and descriptive calculations that do not require those facts. Explain the
+effect on a complete policy recommendation rather than filling missing values.
+
+### API request pacing and limits
+
+An App's **order limit** is a trading-request throttle, not the total GET quota.
+The precise App-specific account/market read ceiling has not been verified from
+an accessible official quota statement. Do not present common third-party
+120-per-minute figures as this App's confirmed GET allowance, or load-test the
+broker to discover a ceiling.
+
+Use sequential resource reads with at least one second between requests, combine
+underlying symbols in one quote call, and fetch a chain once per symbol. Ordinary
+QQQ/IAU checks need roughly four/five GET resource calls including the calendar;
+bounded history reconciliation can add account lookup and transaction calls.
+local ingestion, model probabilities, arithmetic and reports use no broker calls.
+Reuse the saved evidence rather than refetching per candidate. Existing scheduled
+checks keep their current cadence unless the user changes it. On HTTP 429, stop
+the affected operation, record the limit response, and retry at a later requested
+check; do not burst-retry, restart OAuth or change the App order limit.
 
 ## Required collection checklist
 
@@ -189,7 +272,7 @@ completeness, numerical calculability and policy eligibility are separate. Never
 turn an unavailable field into zero or a passed policy check. Existing risk evidence
 still takes priority over unrelated missing inputs.
 
-Before browsing, create a per-symbol checklist under the existing private run
+Before collecting, create a per-symbol checklist under the existing private run
 folder. Use the same run ID as the capture and report:
 
 ```bash
@@ -356,7 +439,7 @@ For every QQQ or IAU candidate, including a no-entry or research-only candidate,
 - Exact underlying, expiry, strike and call identity; bid/ask, Delta, and per-contract premium cash flow with the price basis, multiplier and fee treatment explicit.
 - Current observed underlying price and its source time, plus quote/Greek source times when available. Distinguish browser capture time from source time; label reused quotes with their original observation time.
 - Strike distance in dollars, `strike - underlying_price`, and percent, `100 * (strike - underlying_price) / underlying_price`, using that same observed price. Preserve the sign; call positive distance “above spot,” not a guaranteed safe buffer. If the underlying price is missing or unusable, keep both distances unknown.
-- **Probability of Touch** and **Probability of OTM**, copied from the provider with displayed units and source/capture timing. Always include both fields; display “unknown / not provided” and the reason when unavailable. Do not substitute Delta, `1 - Delta`, or a formula-derived value. These provider model estimates are not measured probabilities of strategy profit, avoiding a defensive buyback, or keeping the shares; do not silently reconcile them to Delta.
+- **Probability of Touch** and **Probability of OTM**: preserve provider values and units/source clocks when supplied. Otherwise show provider values as “unknown / not provided” and, when available, add separately labeled local model estimates with model version, inputs and assumptions. Never relabel estimates or Delta as provider values. Model or provider probabilities are not measured strategy-profit, defensive-buyback or share-retention probabilities.
 
 Keep a candidate comparison separate from the current action recommendation. State whether the candidate meets the verified entry requirements or remains `NO_ENTRY` / `INSUFFICIENT_DATA`, name outstanding facts, and show any suggested quantity separately from the theoretical share-coverage maximum. A preferred candidate alone is not a recommendation to place an order. Preserve the observed probabilities and missing fields in the existing capture records even if no trade occurs; never record a recommendation as a fill.
 

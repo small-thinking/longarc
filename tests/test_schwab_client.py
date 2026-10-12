@@ -38,6 +38,7 @@ def test_read_only_endpoints_and_queries() -> None:
     }
     assert client.quotes(["qqq", "IAU"]) == {"ok": True}
     assert client.option_chain("qqq") == {"ok": True}
+    assert client.market_hours("2026-10-12") == {"ok": True}
     assert calls == [
         ("GET", "/trader/v1/accounts", {"fields": ["positions"]}, "Bearer secret-token", 7),
         ("GET", "/trader/v1/accounts/accountNumbers", {}, "Bearer secret-token", 7),
@@ -70,6 +71,9 @@ def test_read_only_endpoints_and_queries() -> None:
             "Bearer secret-token",
             7,
         ),
+        ("GET", "/marketdata/v1/markets",
+         {"markets": ["equity,option"], "date": ["2026-10-12"]},
+         "Bearer secret-token", 7),
     ]
 
 
@@ -94,6 +98,9 @@ def test_invalid_account_hash_and_dates_are_rejected() -> None:
         client.transactions("abc", "2026-10-01", "2026-10-11T00:00:00Z")
     with pytest.raises(ValueError, match="start date"):
         client.transactions("abc", "2026-10-11T00:00:00Z", "2026-10-01T00:00:00Z")
+    for day in ("2026-02-30", "2026-10-12T00:00:00Z", "2026-1-2", "2026-10-12&x=y"):
+        with pytest.raises(ValueError, match="Market-hours date"):
+            client.market_hours(day)
 
 
 def test_errors_do_not_expose_token_or_server_body() -> None:

@@ -10,6 +10,31 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-12 — API-first covered-call collection
+
+- Updated the existing skill/runbook to prefer authorized API reads and reuse
+  local calculation/report commands. Browser reads are source comparisons or
+  fallbacks; skipped user-deferred checks remain explicitly unknown.
+- Added offline `schwab ingest-chain` for source-isolated canonical API quotes,
+  precise units/timestamps, raw-file hashes, original request coverage, readback
+  and idempotence. Added GET-only `schwab market-hours` with explicit date input.
+- API GET quotas remain unverified; App order limits are a separate throttle.
+  Normal reviews combine quotes and reuse one chain per symbol; HTTP 429 ends
+  the affected read. Current scheduled cadence and trading policy are unchanged.
+- Database changes: none. No migration, broker fills, historical browser-data
+  conversion, new dependency, order writes or unattended execution.
+- Validation: 388 Python tests, 9 browser-bridge tests, Ruff, strict mypy,
+  governance, diff and skill validation passed. Synthetic adapter tests also
+  passed in a temporary tree without private files. Live paced reads, separate
+  QQQ/IAU canonical imports, readback and the existing data-audit command passed;
+  repeated saved inputs reused their original observation across code revisions.
+- Updated the existing twice-per-day heartbeat to use this API-first procedure;
+  fetched-back prompt, schedule, status and destination were verified. No new
+  checking times or trade permissions. Full scheduled execution is not yet verified.
+- Publication: updated [PR #28](https://github.com/small-thinking/longarc/pull/28),
+  not merged. Probability estimates continue independently in PR #29 and are
+  never provider values.
+
 ### 2026-10-12 — Local Schwab read-only API client
 
 - Added local browser OAuth setup, private credential/token storage, state and
