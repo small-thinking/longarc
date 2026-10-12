@@ -10,6 +10,28 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-12 — Default-disabled order capability
+
+- Added separate CALL limit-order planning, broker preview, submit, exact-ID
+  status, cancel and replace interfaces. CLI commands default to local plans
+  without OAuth or broker requests; ordinary reviews remain GET-only.
+- Explicit private profile/account pin, operation digest and unique attempt ID
+  gate writes. Durable intent/response/readback files prevent automatic retries.
+  Accepted requests are not fills; requested cancellations are not final states.
+- Submission checks actual positions, standard deliverables, source quote age,
+  cash and pending order reservations. Unverified open-order query coverage
+  separately blocks submission; no default setting attests that it is complete.
+- Refreshed positions and intervening fill clocks detect cross-read changes;
+  uncertain or partially filled replacements stop for reconciliation.
+- No database migration, new dependency, actual fill, portal setting change,
+  scheduled execution or live broker test. Current production entitlement and
+  query completeness remain unverified; a far-OTM order may still execute.
+- Validation: 82 new synthetic transport/CLI/preflight tests; all 497 Python
+  tests, 9 browser-bridge tests, Ruff, strict mypy, governance and diff checks
+  passed. Actual CLI plan/submit/cancel dry runs also verified zero network
+  without credentials; no fixture requires private account files.
+- Publication: ready for review on `codex/schwab-order-capability`; not merged.
+
 ### 2026-10-12 — Offline CALL probability estimates
 
 - Added `options probabilities` for explicit risk-neutral GBM expiration OTM and
@@ -26,8 +48,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
   A live web/API comparison of three CALLs in one expiry ran successfully;
   evidence and rate/yield assumptions remain private. Web/API agreement does not
   validate real-world probabilities or general error bounds.
-- Publication: [PR #29](https://github.com/small-thinking/longarc/pull/29) opened;
-  awaiting merge. API collection is available through merged PR #28.
+- Publication: [PR #29](https://github.com/small-thinking/longarc/pull/29) merged;
+  API collection is available through merged PR #28.
 
 ### 2026-10-12 — API-first covered-call collection
 

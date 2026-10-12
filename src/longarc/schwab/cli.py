@@ -1,4 +1,4 @@
-"""Local Schwab setup and private, read-only JSON snapshots."""
+"""Local Schwab setup, read-only snapshots and separately gated order plans."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from longarc.schwab.auth import (
 from longarc.schwab.callback import CallbackServer
 from longarc.schwab.capture import ingest_chain
 from longarc.schwab.client import SchwabError, SchwabReadOnlyClient
+from longarc.schwab.order_cli import add_parsers as add_order_parsers
+from longarc.schwab.order_cli import run as run_order
 
 
 def _private_path(path: Path) -> Path:
@@ -30,6 +32,8 @@ def _private_path(path: Path) -> Path:
 
 def _run(args: argparse.Namespace) -> int:
     action = args.schwab_action
+    if action.startswith("order-"):
+        return run_order(args)
     if action == "ingest-chain":
         receipt = ingest_chain(Path(args.db), Path(args.chain_file), Path(args.quotes_file))
         print(json.dumps(receipt))
@@ -170,11 +174,12 @@ def _handler(args: argparse.Namespace) -> int:
 
 
 def add_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
-    parser = subparsers.add_parser("schwab", help="Local OAuth and read-only Schwab snapshots")
+    parser = subparsers.add_parser("schwab", help="Local OAuth, snapshots and default-off orders")
     parser.add_argument(
         "--directory", default="private/schwab", help="Private credential directory"
     )
     actions = parser.add_subparsers(dest="schwab_action", required=True)
+    add_order_parsers(actions)
     ingest = actions.add_parser("ingest-chain", help="Import saved API chain and quotes offline")
     ingest.add_argument("--db", required=True, help="Initialized observation database")
     ingest.add_argument("--chain-file", required=True, help="Saved Schwab API chain envelope")

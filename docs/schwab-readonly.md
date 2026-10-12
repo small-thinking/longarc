@@ -4,6 +4,11 @@ Read `private/qqq-covered-call-plan/README.md` first for the user's current pref
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
 
+Optional [order capability](schwab-orders.md) is a separate explicit workflow,
+defaulting to offline plans. Implementing it does not authorize broker preview,
+submission, modification or cancellation during ordinary or scheduled reviews.
+This read-only procedure and the App order limit 0 remain the current default.
+
 ## Local Python API access
 
 Use `schwab` when the user requests local API setup or authorized account/market
