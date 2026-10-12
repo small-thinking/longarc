@@ -43,6 +43,9 @@ and immediately exchanges the authorization code; `schwab auth-listen` exposes a
 health check before login and stops after one completed callback. Local TLS
 certificate trust must be reviewed by the user; no system trust settings are
 changed automatically. Manual URL entry remains available as a fallback.
+Live OAuth, account balances/positions, QQQ/IAU quotes and call-chain retrieval
+have been verified through the local listener. Snapshots remain raw provider
+responses; this does not establish complete account-history reconciliation.
 OAuth token refresh is automatic during a requested read; the
 seven-day authorization grant still needs periodic browser consent. The local
 login/terms-review window allows one hour; exchange the returned code promptly

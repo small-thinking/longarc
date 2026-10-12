@@ -29,8 +29,11 @@ SQLite was selected and the local observation storage slice is implemented. The 
   request logs. User-managed certificate trust is separate from local readiness;
   no OS trust changes or background schedules are added.
 - Validation: 379 Python tests, 9 browser bridge tests, Ruff, strict mypy and
-  governance passed. OAuth/transport tests use fixtures; live reads remain
-  unverified until the user completes Schwab account consent. Published as
+  governance passed. OAuth/transport tests use fixtures. Live user-completed
+  consent through the HTTPS listener produced tokens; account balances/positions,
+  QQQ/IAU quotes and both call chains were fetched successfully and retained
+  privately. This verifies those endpoints, not complete history or reconciliation.
+  Trade/order-history endpoints and subsequent token refresh remain live-unverified. Published as
   [PR #28](https://github.com/small-thinking/longarc/pull/28); not merged.
 
 ### 2026-09-30 — Quantifiable saved IV context
