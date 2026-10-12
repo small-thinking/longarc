@@ -26,8 +26,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
   A live web/API comparison of three CALLs in one expiry ran successfully;
   evidence and rate/yield assumptions remain private. Web/API agreement does not
   validate real-world probabilities or general error bounds.
-- Publication: separate probability-calculator PR pending. API setup continues
-  independently in PR #28.
+- Publication: [PR #29](https://github.com/small-thinking/longarc/pull/29) opened;
+  not merged. API setup continues independently in PR #28.
 
 ### 2026-09-30 — Quantifiable saved IV context
 
