@@ -10,6 +10,22 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-12 — Local Schwab read-only API client
+
+- Added local browser OAuth setup, private credential/token storage, state and
+  callback checks, on-demand access-token refresh, and explicit seven-day grant
+  expiry. One App can subscribe to both account and market-data products.
+- Added GET-only account balances/positions, account lookup, trades, orders,
+  quotes and call-chain snapshots with capture/query provenance. No order writes,
+  background scheduling or automatic database/ledger ingestion is included.
+- Updated the existing LongArc skill/runbook to route API setup and reads without
+  confusing authentication with a trading-policy check or account reconciliation.
+- Database changes: none; no tables, columns, constraints, keys or indexes changed;
+  no migration or rewrite of existing observations. No new dependency.
+- Validation: 375 Python tests, 9 browser bridge tests, Ruff, strict mypy and
+  governance passed. OAuth/transport tests use fixtures; live reads remain
+  unverified until the user completes Schwab account consent. PR status pending.
+
 ### 2026-09-30 — Quantifiable saved IV context
 
 - Added read-only `options iv-history` with one target sample per date, explicit

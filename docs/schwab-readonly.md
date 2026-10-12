@@ -4,6 +4,88 @@ Read `private/qqq-covered-call-plan/README.md` first for the user's current pref
 
 The existing [longarc-development skill](../.codex/skills/longarc-development/SKILL.md) routes user-requested analysis here. It is the entrypoint; this document is its maintained procedure reference, not a separate skill or browser program. Update this file when the procedure changes rather than creating another runbook.
 
+## Local Python API access
+
+Use `schwab` when the user requests local API setup or authorized account/market
+reads. API setup is distinct from a covered-call recommendation: the collection
+checklist and strategy gates below apply when those snapshots are used for an
+analysis, not when merely registering an App or checking authentication.
+
+Register one Developer Portal App with **Accounts and Trading Production** and
+**Market Data Production**. These can share one Client ID/Secret and one callback;
+the portal's Add Another control adds the second product to the same App.
+An App registration is an API client identity, not a mobile application. Use
+order limit `0` for the current read-only workflow. This is an order throttle,
+not a claim that Schwab provides a separate read-only OAuth permission.
+
+Use the exact registered callback (local default `https://127.0.0.1:8182`).
+Keep credentials, authorization URLs/codes, tokens and account/market snapshots
+under ignored `private/schwab/`; never put their contents in chat, logs, tests
+or Git. Files are written atomically with mode 600. This is private local file
+storage, not encryption or a system keychain. Setup prompts hide both ID and
+secret; do not put credentials or a callback containing a code in shell arguments.
+
+```bash
+uv run python -m longarc.cli schwab configure
+uv run python -m longarc.cli schwab status
+uv run python -m longarc.cli schwab auth-start
+```
+
+If configured already, skip `configure`. Open the `authorization_url` from
+`private/schwab/authorization.json` in the browser. The user reviews Schwab's
+consent and selects accounts on Schwab's own page. Stop for required consent;
+do not infer authorization from an App being Ready For Use. After redirect,
+copy the complete local callback URL from the browser address bar and enter it
+at the hidden prompt:
+
+```bash
+uv run python -m longarc.cli schwab auth-finish
+uv run python -m longarc.cli schwab accounts
+uv run python -m longarc.cli schwab quotes --symbols QQQ IAU
+uv run python -m longarc.cli schwab chain --symbol QQQ
+uv run python -m longarc.cli schwab chain --symbol IAU
+```
+
+No local HTTPS server is needed for this manual flow. The callback can show a
+connection error while the address bar contains the code; do not bypass browser
+certificate/security warnings. The client verifies the callback and single-use
+OAuth state before exchange. Start and finish within 15 minutes. Tokens refresh
+on demand after about 30 minutes; the original refresh grant expires after seven
+days and requires a new `auth-start`/`auth-finish`. Revoked tokens may expire sooner.
+The CLI has no autonomous login, scheduler or background process.
+
+For account-specific trade/order history, first save `account-numbers` and inspect
+its private list to choose an explicit zero-based `--account-index`. Do not assume
+which account is intended. For example, once index 0 is confirmed:
+
+```bash
+uv run python -m longarc.cli schwab account-numbers
+uv run python -m longarc.cli schwab transactions --account-index 0 \
+  --start 2026-10-01T00:00:00Z --end 2026-10-12T23:59:59Z
+uv run python -m longarc.cli schwab orders --account-index 0 \
+  --start 2026-10-01T00:00:00Z --end 2026-10-12T23:59:59Z
+```
+
+Every read saves a raw JSON envelope with capture time, requested resource and
+query context under `private/schwab/snapshots/`; stdout reports only the path.
+`transactions` requests TRADE records; it is not a complete cash ledger. Orders
+are reads and are needed to reconcile outstanding obligations. Server history
+windows and response limits still apply: a single response is not proof of full
+history or account completeness. Chain retrieval currently requests calls for one
+underlying; provider delay, source timestamps, missing Greeks/probabilities and
+contract terms must be inspected before use. Capture time is not source quote time.
+
+These are raw snapshots, not an importer into the existing canonical quote/fill
+ledger. Do not pass them directly to the browser-capture importer, label their
+shape as browser data, or claim automatic reconciliation. Continue the existing
+analysis checks and use explicit field mapping when that integration is added.
+The data client exposes GET resource methods only and refuses redirects; no order
+placement, preview, replacement, cancellation or generic broker-write command exists.
+
+Official references: [Trader OAuth and local callbacks](https://developer.schwab.com/products/trader-api--individual/details/documentation/Retail%20Trader%20API%20Production?docId=retail-trader-api-production--trader-api--individual--documentation),
+[account API specification](https://developer.schwab.com/products/trader-api--individual/details/specifications/Retail%20Trader%20API%20Production),
+and [OAuth overview](https://developer.schwab.com/user-guides/get-started/authenticate-with-oauth).
+
 ## Multiple-symbol reviews
 
 Use the same procedure for QQQ, IAU or an explicitly requested stock/ETF CALL

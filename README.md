@@ -32,6 +32,22 @@ account totals plus `by_symbol`; `--symbol IAU` limits results to IAU. Reports s
 realized option P&L and remaining recorded contracts, not stock P&L or invented
 open-option marks. See [symbol contracts and compatibility](docs/calculations.md#symbol-scope-and-compatibility).
 
+## Local Schwab API access
+
+`schwab` supports one registered Developer Portal App with both Accounts and
+Trading Production and Market Data Production. It works with local Python;
+no mobile application or public website is needed. It can save balances,
+positions, account identifiers, trades, orders, quotes and call chains as private
+JSON snapshots. OAuth token refresh is automatic during a requested read; the
+seven-day authorization grant still needs periodic browser consent.
+
+Start with `uv run python -m longarc.cli schwab status` and follow
+[local setup and commands](docs/schwab-readonly.md#local-python-api-access).
+App credentials, OAuth URLs/tokens and real snapshots stay under ignored
+`private/` with owner-only file permissions. API resource calls are GET-only;
+OAuth token exchange is the only POST. No order entry, preview, modification,
+cancellation, background collection or automatic database ingestion is implemented.
+
 ## Read-only analysis reports
 
 `options data-audit` inventories records, quote coverage, missing fields and

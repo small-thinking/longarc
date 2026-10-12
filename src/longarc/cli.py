@@ -12,6 +12,7 @@ from longarc.core.logging import configure_logging
 from longarc.data.options_cli import add_parser as add_options_parser
 from longarc.data.providers.registry import get_provider
 from longarc.data.store import read_bars
+from longarc.schwab.cli import add_parser as add_schwab_parser
 from longarc.storage.cli import add_parser
 
 LOGGER = logging.getLogger(__name__)
@@ -98,6 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_parser(subparsers)
     add_calc_parser(subparsers)
     add_options_parser(subparsers)
+    add_schwab_parser(subparsers)
     return parser
 
 

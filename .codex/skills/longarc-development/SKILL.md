@@ -1,6 +1,6 @@
 ---
 name: longarc-development
-description: Use for LongArc repository changes or user-requested Schwab read-only covered-call analysis, including QQQ and IAU. Routes analysis to the local context and runbook; enforces reviewable repository changes.
+description: Use for LongArc repository changes, local Schwab API setup and reads, or user-requested read-only covered-call analysis, including QQQ and IAU. Routes to the maintained runbook and preserves reviewable changes.
 ---
 
 # LongArc Development Skill
@@ -25,6 +25,21 @@ cutoff). Report gross premium capture and elapsed lifetime separately; an
 unknown opening time makes the pace trigger unknown, not satisfied. The fixed
 profit threshold belongs only to policies that select it; risk exits remain
 independent and take priority.
+
+## Local Schwab API setup and reads
+
+For App registration, OAuth setup or requested API snapshots, follow
+[local Python API access](../../../docs/schwab-readonly.md#local-python-api-access).
+One Developer Portal App can include both Accounts and Trading Production and
+Market Data Production; local Python does not require a mobile app. Use the exact
+registered local callback and order limit 0 for the current read-only workflow.
+Save credentials/tokens only in ignored private files, never chat or Git. The
+`schwab` CLI writes raw snapshots and has no order-write or preview commands.
+Do not treat raw API snapshots as canonical browser captures or reconciled fills.
+Account consent is a separate authorization step; Ready For Use is not consent.
+Authentication-only setup does not require the trading collection checklist.
+When using snapshots for a covered-call recommendation, resume the analysis
+procedure below, including policy, source freshness and missing-data checks.
 
 ## Read-only covered-call analysis
 
