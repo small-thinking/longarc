@@ -24,7 +24,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
   no migration or rewrite of existing observations. No new dependency.
 - Validation: 375 Python tests, 9 browser bridge tests, Ruff, strict mypy and
   governance passed. OAuth/transport tests use fixtures; live reads remain
-  unverified until the user completes Schwab account consent. PR status pending.
+  unverified until the user completes Schwab account consent. Published as
+  [PR #28](https://github.com/small-thinking/longarc/pull/28); not merged.
 
 ### 2026-09-30 — Quantifiable saved IV context
 
