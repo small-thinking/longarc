@@ -11,6 +11,13 @@ This read-only procedure and the App order limit 0 remain the current default.
 
 ## Local Python API access
 
+For an explicitly selected named broker/account, use the shared
+[`broker --profile ALIAS` workflow](brokers.md). It preserves exact account pins
+and source identity for both Schwab and E*TRADE; the existing `schwab` commands
+below remain compatible. E*TRADE OAuth and missing source fields are documented
+in [its maintained API contract](etrade-readonly.md). Account coverage, cash and
+execution-ledger aliases remain separate even when market calculations are shared.
+
 Use `schwab` when the user requests local API setup or authorized account/market
 reads. API setup is distinct from a covered-call recommendation: the collection
 checklist and strategy gates below apply when those snapshots are used for an

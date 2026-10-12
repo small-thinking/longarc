@@ -2,69 +2,29 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
-import math
 import re
-from datetime import UTC, date, datetime
-from decimal import Decimal, InvalidOperation
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from longarc.analytics.metrics import calculate
+from longarc.core.market_fields import count as _count
+from longarc.core.market_fields import epoch_time, number
+from longarc.core.market_fields import money_u as _money
 from longarc.core.symbols import canonical_symbol
-from longarc.storage import holdings, store
+from longarc.data.api_capture import ingest_api_chain
+from longarc.storage import holdings
 
 _OPTION = re.compile(r"([A-Z][A-Z0-9.]*)\s+(\d{2})(\d{2})(\d{2})C(\d{8})\Z")
 
 
-def _money(value: Any) -> int | None:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        amount = Decimal(str(value)) * 1_000_000
-    except InvalidOperation:
-        return None
-    if amount.is_finite() and 0 <= amount < 2**63 and amount == amount.to_integral_value():
-        return int(amount)
-    return None
-
-
-def _count(value: Any) -> int | None:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        count = Decimal(str(value))
-    except InvalidOperation:
-        return None
-    if count.is_finite() and 0 <= count < 2**63 and count == count.to_integral_value():
-        return int(count)
-    return None
-
-
 def _decimal(value: Any, *, nonnegative: bool = False, upper: int | None = None) -> float | None:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        number = Decimal(str(value))
-    except InvalidOperation:
-        return None
-    if (not number.is_finite() or (nonnegative and number < 0)
-            or (upper is not None and not 0 <= number <= upper)):
-        return None
-    converted = float(number)
-    return converted if math.isfinite(converted) else None
+    return number(value, nonnegative=nonnegative, lower=0 if upper is not None else None,
+                  upper=upper)
 
 
 def _millis(value: Any) -> str | None:
-    count = _count(value)
-    if count is None or count == 0:
-        return None
-    try:
-        return (datetime.fromtimestamp(count / 1000, UTC)
-                .isoformat(timespec="milliseconds").replace("+00:00", "Z"))
-    except (OverflowError, OSError, ValueError):
-        return None
+    return epoch_time(value, milliseconds=True)
 
 
 def _envelope(raw: Any, resource: str) -> tuple[dict[str, Any], str]:
@@ -234,53 +194,8 @@ def normalize_api_chain(chain: dict[str, Any], quotes: dict[str, Any]) -> dict[s
 
 
 def ingest_chain(path: Path, chain_file: Path, quotes_file: Path) -> dict[str, Any]:
-    """Persist one offline API observation and verify readback; reruns are idempotent."""
-    if len({path.resolve(), chain_file.resolve(), quotes_file.resolve()}) != 3:
-        raise ValueError("Database, chain file and quotes file must be distinct")
-    chain_bytes = chain_file.read_bytes()
-    quote_bytes = quotes_file.read_bytes()
-    chain = json.loads(chain_bytes)
-    quotes = json.loads(quote_bytes)
-    evidence = [{"resource": "chain", "file": str(chain_file.resolve()),
-                 "sha256": hashlib.sha256(chain_bytes).hexdigest(),
-                 "captured_at": holdings.timestamp(chain["captured_at"])},
-                {"resource": "quotes", "file": str(quotes_file.resolve()),
-                 "sha256": hashlib.sha256(quote_bytes).hexdigest(),
-                 "captured_at": holdings.timestamp(quotes["captured_at"])}]
-    key = "schwab-api-chain-v1:" + store.digest(evidence)
-    with store.connect(path, readonly=True) as db:
-        store.check_schema(db)
-        existing = db.execute(
-            "SELECT record_id FROM observations WHERE idempotency_key=?", (key,)
-        ).fetchone()
-    if existing is not None:
-        saved = store.get_observation(path, existing["record_id"])["payload"]
-        if (saved["source"] != "schwab_api" or saved["inputs"].get("format") != "option-chain-v1"
-                or saved["inputs"].get("api_evidence") != evidence):
-            raise ValueError("Existing API observation conflicts with saved evidence")
-        return {"record_id": existing["record_id"], "write_status": "existing",
-                "status": saved["results"]["status"],
-                "quote_count": len(saved["results"]["quotes"])}
-    normalized = normalize_api_chain(chain, quotes)
-    event = {
-        "idempotency_key": key,
-        "scope": f"options:{normalized['symbol']}", "mode": "observe",
-        "kind": "observation" if normalized["results"]["quotes"] else "error",
-        "observed_at": normalized["observed_at"], "source": "schwab_api",
-        "quality": "unverified",
-        "code_version": "schwab-api-chain-v1:" + hashlib.sha256(
-            Path(__file__).read_bytes()).hexdigest(),
-        "inputs": {"format": "option-chain-v1", "symbol": normalized["symbol"],
-                   "requested": {"symbol": normalized["symbol"], "option_type": "CALL",
-                                 "coverage": "all_returned_calls"},
-                   "api_requests": {"chain": chain["request"], "quotes": quotes["request"]},
-                   "api_evidence": evidence},
-        "results": normalized["results"], "evidence_ids": [item["file"] for item in evidence],
-    }
-    receipt = store.save_observation(path, event)
-    saved = store.get_observation(path, receipt["record_id"])
-    if saved["payload"] != store.validate(event):
-        raise ValueError("Schwab API observation readback mismatch")
-    return {"record_id": receipt["record_id"], "write_status": receipt["status"],
-            "status": saved["payload"]["results"]["status"],
-            "quote_count": len(saved["payload"]["results"]["quotes"])}
+    """Persist canonical API evidence through the shared broker importer."""
+    return ingest_api_chain(
+        path, chain_file, quotes_file, source="schwab_api", adapter_tag="schwab-api-chain-v1",
+        adapter_file=Path(__file__), normalize=normalize_api_chain,
+    )

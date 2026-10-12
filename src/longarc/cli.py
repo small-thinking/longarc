@@ -8,6 +8,7 @@ import os
 from typing import Any, Callable, cast
 
 from longarc.analytics.cli import add_parser as add_calc_parser
+from longarc.brokers.cli import add_parser as add_broker_parser
 from longarc.core.logging import configure_logging
 from longarc.data.options_cli import add_parser as add_options_parser
 from longarc.data.providers.registry import get_provider
@@ -100,6 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_calc_parser(subparsers)
     add_options_parser(subparsers)
     add_schwab_parser(subparsers)
+    add_broker_parser(subparsers)
     return parser
 
 

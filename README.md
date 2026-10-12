@@ -32,6 +32,19 @@ account totals plus `by_symbol`; `--symbol IAU` limits results to IAU. Reports s
 realized option P&L and remaining recorded contracts, not stock P&L or invented
 open-option marks. See [symbol contracts and compatibility](docs/calculations.md#symbol-scope-and-compatibility).
 
+## Named broker and account access
+
+`broker --profile ALIAS` provides one read-only interface for Schwab and E*TRADE:
+account inventories, explicitly bound positions/balances, quotes, expiries and
+CALL chains. Each login/environment has separate private credentials; account
+reads require an exact securities-account pin. Canonical imports reuse storage,
+metrics and reports; sandbox records are isolated as synthetic. Existing Schwab
+commands remain compatible. See [shared commands](docs/brokers.md) and maintained
+[E*TRADE contracts](docs/etrade-readonly.md). E*TRADE tokens expire at default
+Eastern midnight; renewal handles same-day inactivity, not next-day consent.
+Passing synthetic tests does not establish verified live brokerage integration.
+No E*TRADE order writes or new unattended execution are added.
+
 ## Local Schwab API access
 
 `schwab` supports one registered Developer Portal App with both Accounts and
