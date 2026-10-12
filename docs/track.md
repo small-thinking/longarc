@@ -10,6 +10,25 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-12 — Offline CALL probability estimates
+
+- Added `options probabilities` for explicit risk-neutral GBM expiration OTM and
+  upper-strike touch estimates, with a versioned model, ACT/365F expiry clock,
+  explicit annual IV/rate/yield units and source assumptions.
+- Optional same-contract web comparisons retain provider values separately and
+  report percentage-point differences and observation-time gaps. Missing provider
+  fields remain unknown; agreement is not calibrated accuracy or policy approval.
+- Outputs are new owner-only JSON files. No database/schema migration, new
+  dependency, policy change, scheduler change or broker writes.
+- Validation: 27 new regressions; 376 Python tests, 9 browser-bridge tests, Ruff,
+  strict mypy, governance and diff checks passed. Independent first-passage
+  fixtures cover nonzero drift, zero time/volatility and weighted extreme tails.
+  A live web/API comparison of three CALLs in one expiry ran successfully;
+  evidence and rate/yield assumptions remain private. Web/API agreement does not
+  validate real-world probabilities or general error bounds.
+- Publication: [PR #29](https://github.com/small-thinking/longarc/pull/29) opened;
+  awaiting merge. API collection is available through merged PR #28.
+
 ### 2026-10-12 — API-first covered-call collection
 
 - Updated the existing skill/runbook to prefer authorized API reads and reuse
@@ -36,7 +55,7 @@ SQLite was selected and the local observation storage slice is implemented. The 
   fetched-back prompt, schedule, status and destination were verified. No new
   checking times or trade permissions. Full scheduled execution is not yet verified.
 - Publication: updated [PR #28](https://github.com/small-thinking/longarc/pull/28),
-  not merged. Probability estimates continue independently in PR #29 and are
+  merged. Probability estimates continue in PR #29 and are
   never provider values.
 
 ### 2026-10-12 — Local Schwab read-only API client

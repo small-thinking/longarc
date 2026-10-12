@@ -115,6 +115,15 @@ Repeated imports are idempotent. After verifying a closed market, `options inges
 
 ## Calculations
 
+`options probabilities --file INPUT.json --json-output NEW_OUTPUT.json` estimates
+CALL expiration OTM and upper-strike touch probabilities from explicit price,
+annual IV, rate, dividend-yield and expiry-time inputs. An optional same-contract
+web observation produces percentage-point differences and exposes the time gap.
+These are risk-neutral model estimates, kept separate from provider values and
+trading-policy checks. The command is offline, saves new outputs with mode 600,
+and requires neither a database nor broker access. See
+[probability estimates](docs/calculations.md#call-probability-estimates-and-web-comparison).
+
 Use `uv run python -m longarc.cli calc --db PATH --file REQUEST.json` to calculate quote metrics, history changes, and explicit close/roll scenarios, then log inputs/results for readback. See [formulas, units, logging and dry run](docs/calculations.md). Strategy decisions and current portfolio P&L are not inferred.
 
 ## Read-only session handoff

@@ -57,6 +57,71 @@ The existing local covered-call-advisor formulas were inspected at commit `ce97a
 Strategy thresholds remain unchanged and unapproved. Next: specify source freshness/Greek units and a minimal policy contract, then add manual fill/reconciliation records before treating scenarios as current holdings. Automatic collection, scheduling/alerts, candidate ranking, assignment/dividend modeling and live-trading readiness are still separate work.
 
 
+## CALL probability estimates and web comparison
+
+Run an offline model without changing the quote ledger or the trading policy:
+
+```bash
+uv run python -m longarc.cli options probabilities \
+  --file private/probability-input.json \
+  --json-output private/probability-result.json
+```
+
+The output path must be new. It is written with owner-only permissions and never
+overwrites a request, prior result or credential file. Omit `--json-output` to
+print JSON. Real inputs and comparisons belong under ignored `private/`.
+
+The request requires `option_symbol` (exact contract identity), `source_ref`,
+`spot`, `strike`, `volatility`, `risk_free_rate`, `dividend_yield`, `as_of`, and
+`expires_at`. Both times require timezone offsets; elapsed seconds use ACT/365F.
+Volatility is an annual fraction (20% means `0.20`), and rates/yields are annual
+continuously compounded fractions. Every input is explicit; an absent yield is
+not silently assumed zero. The caller records provider units, compounding
+assumptions and field/source times in the request, which is preserved in output.
+This command does not decide whether a source is current or a quote is usable.
+
+For a CALL, the constant-volatility risk-neutral geometric Brownian model uses
+`mu = r - q - sigma**2 / 2`, `x = log(K / S)`, and `v = sigma * sqrt(T)`:
+
+- Expiration OTM: `Phi((x - mu*T) / v)`, for the strict event `S_T < K`.
+- Upper-strike touch when `S < K`:
+  `Phi((mu*T-x)/v) + exp(2*mu*x/sigma**2) * Phi((-mu*T-x)/v)`.
+- Touch includes the current instant: a spot already at/above the strike yields
+  one. With no time or volatility, deterministic path comparisons replace the
+  formulas; equality at expiration is ATM, not OTM.
+
+The weighted Gaussian tail is evaluated without multiplying an overflowing
+exponential by an underflowed CDF. No new dependency is required. Formula basis:
+[Black and Scholes (1973)](https://www.journals.uchicago.edu/doi/pdf/10.1086/260062)
+and [Hurd, Appendix A.10](https://www.fields.utoronto.ca/programs/scientific/09-10/finance/courses/hurdnotes.pdf).
+These are risk-neutral model estimates, not empirical probabilities, probability
+of assignment, or a reproduction of Schwab's undisclosed parameter choices.
+The model assumes constant IV, continuous paths and a continuous yield; it does
+not incorporate discrete dividend events or jump risk.
+
+An optional `provider_comparison` object requires the same `option_symbol`, its
+own `source_ref` and `observed_at`, and any available `probability_touch` and
+`probability_otm` as fractions between zero and one. Missing values stay null.
+Output separates `model_probabilities` from the original provider observation,
+then reports signed and absolute differences in **percentage points** and the
+observation time gap. It does not label agreement as calibrated accuracy.
+
+To compare: freeze the exact contract and expiry cutoff; save web spot, IV,
+probabilities and observation time; collect a nearby API quote and retain source
+times; run once with web inputs to isolate model differences, then with API
+inputs to expose feed/time differences. Record rate/yield assumptions rather
+than tuning parameters to force agreement. Keep every comparison, including
+missing values and large differences. Multiple strikes from one snapshot are
+correlated observations. A small spot-check cannot establish a general error
+bound or validate a strategy.
+
+Schwab raw snapshots can supply prices/IV and expiry after explicit mapping, but
+this command adds no API collector, canonical importer, fill reconciliation,
+automatic scheduler or broker writes. Provider probability fields in existing
+reports remain unchanged; model estimates are separate research outputs. Existing
+`decide`, `costs`, `performance`, `replay` and `estimate` remain available under
+their existing input contracts.
+
 ## Symbol scope and compatibility
 
 All new requests should carry the exact canonical uppercase ticker; spelling is
