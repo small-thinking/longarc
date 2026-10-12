@@ -54,9 +54,11 @@ because Schwab controls its separate lifetime.
 Start with `uv run python -m longarc.cli schwab status` and follow
 [local setup and commands](docs/schwab-readonly.md#local-python-api-access).
 App credentials, OAuth URLs/tokens and real snapshots stay under ignored
-`private/` with owner-only file permissions. API resource calls are GET-only;
-OAuth token exchange is the only POST. No order entry, preview, modification,
-cancellation, background collection or automatic database ingestion is implemented.
+`private/` with owner-only file permissions. The review client remains GET-only.
+Separate [order commands](docs/schwab-orders.md) support local plans and guarded
+broker preview, submission, exact status, replacement and cancellation. They
+default to zero-network planning; no trading profile, broker write or live test
+is enabled by this implementation. No unattended execution is implemented.
 
 ## API-first reviews
 
