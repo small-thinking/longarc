@@ -230,6 +230,16 @@ coverage. API quote clocks and trade clocks are distinct. There is no independen
 Greek calculation clock in the verified responses; keep `greeks_at` unknown.
 API success is not evidence that all trading-policy checks passed.
 
+For a policy using `latest_exit_trading_days`, inspect the official exchange
+calendar through the held expiry, not only today's market-hours response. Pass
+the complete bounded session list and its source as `trading_calendar` to
+`options decide` (and replay frames). A local saved official calendar is reusable
+evidence only within its coverage and after checking for relevant calendar
+changes. Missing coverage is unknown, never a Monday-Friday approximation.
+Report both calendar DTE and future exchange sessions. An explicitly configured
+roll-or-close time window uses the existing roll gates; no qualifying new leg
+means close the old call, while strike/Delta/dividend risk exits retain priority.
+
 Reconcile execution evidence when needed through the bounded account-numbers /
 transactions procedure above. A verified empty history response that disagrees
 with known fills is a source discrepancy, not proof of no trades. Reference the

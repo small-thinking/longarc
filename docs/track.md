@@ -331,3 +331,18 @@ Latest implementation evidence is recorded in the 2026-09-21 entry above. Earlie
   tree passed 322 Python tests and 9 browser-bridge tests. No actual merge performed.
 
 - PR cleanup: #22 and #24 merged after scoped review; #23 retains additive report commands. Final integrated checks run before merging #23.
+### 2026-10-12 — Exchange-session expiry management
+
+- Added an opt-in exchange-session countdown using complete, bounded caller
+  calendar evidence. Missing coverage stays unknown; holidays are excluded and
+  early-close sessions count once. Calendar-day policies remain compatible.
+- Added explicit roll-or-close time-window management, using the same roll
+  screen as watch decisions. Hard risk exits take priority; unavailable or
+  unqualified replacements fall back to closing the short call.
+- Replay passes each frame's calendar to the shared evaluator. Entry tenors,
+  profit lifetime clocks, broker writes and database schema are unchanged.
+- Validation: 32 new calendar/roll/replay regressions passed; 612 full-suite
+  tests passed in the sandbox and all 3 loopback callback tests passed separately
+  with local-port access (615 total). Ruff, strict mypy, governance and diff
+  checks passed. No live brokerage execution was tested.
+- Publication: feature branch `codex/five-session-exit`, pending PR review.

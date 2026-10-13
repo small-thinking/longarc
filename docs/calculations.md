@@ -177,6 +177,39 @@ The request contains `as_of`, `idempotency_key`, `source`, `mode`, `evidence_ids
 
 Every decision saves full facts/policy, policy hash, source references, code fingerprint, per-check states and reasons. No-action and malformed evaluations are journaled; missing journal metadata cannot be fabricated. A changed request needs a new idempotency key. LLM commentary may explain market context or missing evidence but cannot override a triggered rule in the same policy version. Changing thresholds is a separate, versioned policy choice, not automatic learning from recent P&L. Risk/entry outputs are advisory candidates, never broker orders or proofs of readiness.
 
+### Expiry management
+
+A policy specifies exactly one countdown: historical `latest_exit_dte` uses
+calendar days, or `latest_exit_trading_days` uses supplied exchange sessions.
+For the latter, pass a top-level `trading_calendar` with a nonempty `source_ref`,
+ISO `start_date`/`end_date` bounds, and an ordered, unique `trading_dates` list
+representing **all** sessions within those bounds. The bounds must cover the
+New York observation date through expiry. Exclude full exchange holidays; an
+early-close session counts as one day. This is a caller-supplied evidence
+contract, not an independently verified calendar or a generated weekday count.
+
+`metrics.dte` remains calendar DTE. `metrics.trading_dte` counts sessions strictly
+after the current New York date and through expiry, including expiry if it is a
+session. Thus five future sessions often equal seven calendar days in an ordinary
+week. Missing or insufficient calendar coverage leaves the time check unknown,
+blocks HOLD, and never falls back to weekdays. Known strike, dividend and Delta
+risks still produce an exit. Malformed calendars are errors.
+
+`time_exit_action` defaults to `close`. With explicit `roll_or_close`, a triggered
+time window considers the supplied replacement even below the watch Delta.
+The existing same-underlying, CALL, quantity, multiplier, new-leg entry, higher
+strike, later expiry, extension limit, roll-count and fee-adjusted nonnegative
+credit gates all apply. Current quote/usability, coverage, orders and dividend
+checks must pass; strike and Delta exits must be known false. Any known hard risk
+still closes first. Without a qualified replacement, the time window produces
+`BTC_RISK` with reason `time_exit`, rather than indefinite WATCH/HOLD. This
+closes the short call, not the underlying shares, and remains advisory.
+
+Replay frames may pass the same `trading_calendar` object to the shared evaluator.
+Old policies and stored decisions/replays are not rewritten. Entry tenor and roll
+extension limits still use calendar days; session countdown does not change
+profit-pace lifetime calculations or enable execution. No database migration is needed.
+
 ```bash
 uv run python -m longarc.cli options decide --db private/longarc.sqlite3 --file private/decision.json --policy private/policy.json
 uv run python -m longarc.cli options execution-add --db private/longarc.sqlite3 --file private/confirmed-execution.json

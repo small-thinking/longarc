@@ -32,6 +32,70 @@ def _microseconds(duration: timedelta) -> int:
             + duration.microseconds)
 
 
+def _trading_dte(calendar: Any, today: date, expiry: date | None) -> int | None:
+    """Count supplied complete exchange sessions in (today, expiry], never weekdays."""
+    if calendar is None or expiry is None:
+        return None
+    if not isinstance(calendar, dict):
+        raise ValueError("trading_calendar must be an object")
+    if calendar.get("source_ref") is None:
+        return None
+    if not isinstance(calendar["source_ref"], str) or not calendar["source_ref"].strip():
+        raise ValueError("Calendar source_ref must be a nonempty string")
+    if not calendar.get("start_date") or not calendar.get("end_date") \
+            or calendar.get("trading_dates") is None:
+        return None
+    start, end = date.fromisoformat(calendar["start_date"]), date.fromisoformat(
+        calendar["end_date"])
+    dates = calendar["trading_dates"]
+    if not isinstance(dates, list) or any(not isinstance(d, str) for d in dates):
+        raise ValueError("Calendar trading_dates must be an ISO date list")
+    sessions = [date.fromisoformat(d) for d in dates]
+    if start > end or sessions != sorted(set(sessions)) or any(
+            d < start or d > end or d.weekday() >= 5 for d in sessions):
+        raise ValueError("Calendar dates must be ordered, unique weekday sessions within bounds")
+    if start > today or end < expiry:
+        return None
+    return sum(today < d <= expiry for d in sessions)
+
+
+def _roll_checks(
+    f: dict[str, Any], replacement: dict[str, Any], p: dict[str, Any],
+    roll: dict[str, Any], today: date, qty: int,
+) -> tuple[dict[str, bool | None], int | None]:
+    """One roll screen shared by watch and explicit near-expiry management."""
+    entry = screen_entry(replacement, p, today)
+    if not replacement.get("expiry_date") or not f.get("expiry_date"):
+        return entry, None
+    expiry, new_expiry = date.fromisoformat(f["expiry_date"]), date.fromisoformat(
+        replacement["expiry_date"])
+    strike = _integer(f.get("strike_u"), "strike_u", 1)
+    new_strike = _integer(replacement.get("strike_u"), "replacement_strike", 1)
+    ask = _integer(f.get("ask_u"), "ask_u")
+    multiplier = _integer(f.get("multiplier"), "multiplier", 1)
+    closing_fees = _integer(f.get("estimated_closing_total_fees_u"), "closing_fees_u")
+    count = _integer(f.get("episode_roll_count"), "episode_roll_count")
+    new_bid = _integer(replacement.get("bid_u"), "replacement_bid_u")
+    new_fees = _integer(replacement.get("opening_total_fees_u"), "new_fees_u")
+    new_multiplier = _integer(replacement.get("multiplier"), "new_multiplier", 1)
+    credit = ((new_bid - ask) * qty * multiplier - closing_fees - new_fees
+              if new_bid is not None and ask is not None and multiplier is not None
+              and closing_fees is not None and new_fees is not None else None)
+    entry.update(
+        higher_strike=new_strike > strike if new_strike and strike else None,
+        later_expiry=new_expiry > expiry,
+        extension_within_limit=(new_expiry - expiry).days <= roll["max_extra_calendar_days"],
+        roll_count_within_limit=count < roll["max_rolls_per_episode"]
+        if count is not None else None,
+        nonnegative_net_credit=credit >= 0 if credit is not None else None,
+        matched_roll_quantity=replacement.get("contracts") == qty,
+        matched_multiplier=new_multiplier == multiplier and multiplier is not None,
+        same_underlying=replacement.get("symbol") == f["symbol"],
+        call_only=replacement.get("option_type") == "CALL",
+    )
+    return entry, credit
+
+
 def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     """Policy uses policy_parameters and roll from the existing private contract.
 
@@ -58,9 +122,13 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Invalid profit pace minimum")
     if pace_mode != "only" and profit_operator not in (">", ">="):
         raise ValueError("Invalid profit threshold operator")
-    exit_days = _integer(p.get("latest_exit_dte"), "latest_exit_dte")
-    if exit_days is None:
-        raise ValueError("latest_exit_dte required")
+    calendar_exit = _integer(p.get("latest_exit_dte"), "latest_exit_dte")
+    session_exit = _integer(p.get("latest_exit_trading_days"), "latest_exit_trading_days")
+    if (calendar_exit is None) == (session_exit is None):
+        raise ValueError("Require exactly one of latest_exit_dte or latest_exit_trading_days")
+    time_action = p.get("time_exit_action", "close")
+    if time_action not in ("close", "roll_or_close"):
+        raise ValueError("Invalid time_exit_action")
     f = request["facts"]
     symbol = symbols.canonical_symbol(f.get("symbol"))
     if f.get("option_type") != "CALL":
@@ -103,17 +171,46 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     if dte is not None and dte < 0:
         reasons.append("expired_contract_requires_settlement_reconciliation")
         return output("RECONCILE")
-    checks["time_exit"] = dte <= exit_days if dte is not None else None
+    if session_exit is not None:
+        trading_dte = _trading_dte(request.get("trading_calendar"),
+                                   now.astimezone(NY).date(), expiry)
+        metrics["trading_dte"] = trading_dte
+        metrics["time_exit_basis"] = "exchange_sessions_excluding_today_including_expiry"
+        checks["time_exit"] = trading_dte <= session_exit if trading_dte is not None else None
+    else:
+        assert calendar_exit is not None
+        metrics["time_exit_basis"] = "calendar_days"
+        checks["time_exit"] = dte <= calendar_exit if dte is not None else None
     checks["dividend_exit"] = (None if checks["dividend_window_clear"] is None
                                else not checks["dividend_window_clear"])
     checks["strike_exit"] = (spot >= strike if spot is not None and strike is not None
                              and checks["underlying_usable"] else None)
     checks["delta_exit"] = (delta >= defend if delta is not None
                             and checks["greeks_usable"] else None)
-    for name in ("time_exit", "dividend_exit", "strike_exit", "delta_exit"):
+    for name in ("dividend_exit", "strike_exit", "delta_exit"):
         if checks[name] is True:
             reasons.append(name)
     if reasons:
+        if checks["time_exit"] is True:
+            reasons.insert(0, "time_exit")
+        return output("BTC_RISK")
+    if checks["time_exit"] is True:
+        replacement = request.get("replacement")
+        required = ("coverage_verified", "orders_clear", "quote_usable", "greeks_usable",
+                    "underlying_usable", "dividend_window_clear")
+        bid = _integer(f.get("bid_u"), "bid_u")
+        ask = _integer(f.get("ask_u"), "ask_u")
+        valid = bid is not None and ask is not None and bid <= ask
+        if (time_action == "roll_or_close" and replacement is not None and valid
+                and all(checks[k] is True for k in required)
+                and checks["delta_exit"] is False and checks["strike_exit"] is False):
+            entry, credit = _roll_checks(f, replacement, p, roll, now.astimezone(NY).date(), qty)
+            checks.update({"roll_" + k: v for k, v in entry.items()})
+            metrics["net_roll_cashflow_u"] = credit
+            if replacement.get("expiry_date") and all(v is True for v in entry.values()):
+                reasons.append("time_window_and_replacement_screen_passed")
+                return output("ROLL_CANDIDATE")
+        reasons.append("time_exit")
         return output("BTC_RISK")
 
     ask = _integer(f.get("ask_u"), "ask_u")
@@ -186,35 +283,12 @@ def evaluate(request: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     if delta is not None and delta >= watch:
         replacement = request.get("replacement")
         if replacement is not None:
-            entry = screen_entry(replacement, p, now.astimezone(NY).date())
+            entry, credit = _roll_checks(f, replacement, p, roll, now.astimezone(NY).date(), qty)
+            checks.update({"roll_" + k: v for k, v in entry.items()})
             if not replacement.get("expiry_date") or expiry is None:
-                checks.update({"roll_" + k: v for k, v in entry.items()})
                 reasons.append("replacement_expiry_unknown")
                 return output("WATCH")
-            new_expiry = date.fromisoformat(replacement["expiry_date"])
-            new_strike = _integer(replacement.get("strike_u"), "replacement_strike", 1)
-            count = _integer(f.get("episode_roll_count"), "episode_roll_count")
-            new_bid = _integer(replacement.get("bid_u"), "replacement_bid_u")
-            new_fees = _integer(replacement.get("opening_total_fees_u"), "new_fees_u")
-            new_multiplier = _integer(replacement.get("multiplier"), "new_multiplier", 1)
-            credit = ((new_bid - ask) * qty * multiplier - closing_fees - new_fees
-                      if new_bid is not None and ask is not None and multiplier is not None
-                      and closing_fees is not None and new_fees is not None else None)
             metrics["net_roll_cashflow_u"] = credit
-            entry.update(
-                higher_strike=new_strike > strike if new_strike and strike else None,
-                later_expiry=new_expiry > expiry,
-                extension_within_limit=(new_expiry - expiry).days
-                <= roll["max_extra_calendar_days"],
-                roll_count_within_limit=count < roll["max_rolls_per_episode"]
-                if count is not None else None,
-                nonnegative_net_credit=credit >= 0 if credit is not None else None,
-                matched_roll_quantity=replacement.get("contracts") == qty,
-                matched_multiplier=new_multiplier == multiplier and multiplier is not None,
-                same_underlying=replacement.get("symbol") == symbol,
-                call_only=replacement.get("option_type") == "CALL",
-            )
-            checks.update({"roll_" + k: v for k, v in entry.items()})
             if all(v is True for v in entry.values()):
                 reasons.append("watch_range_and_replacement_screen_passed")
                 return output("ROLL_CANDIDATE")
