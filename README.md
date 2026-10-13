@@ -10,6 +10,12 @@ SQLite storage foundation is implemented: initialization, observation writes/rea
 
 Candidate reports include spot and quote timing, dollar/percent distance to strike, and provider Probability of Touch and Probability of OTM alongside bid/ask, Delta and premium. Missing values remain explicit; candidate selection is separate from the current action recommendation. See [required report fields](docs/schwab-readonly.md#required-recommendation-fields).
 
+Advisory policies can use an exchange-session countdown for expiry management,
+with an explicitly supplied complete trading calendar. An optional roll-or-close
+window shares the existing roll screen; strike, dividend and Delta risk exits
+take priority. Calendar gaps remain unknown, and historical calendar-day
+policies retain their behavior. See [expiry management](docs/calculations.md#expiry-management).
+
 The former generic trading framework has been removed: no backtest/paper/report placeholder commands, application trading configuration, preset capital/risk budgets, or broker execution credentials. Those old commands now fail argument parsing instead of returning success.
 
 ## Multiple underlyings, one workflow

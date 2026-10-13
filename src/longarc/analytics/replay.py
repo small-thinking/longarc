@@ -174,6 +174,8 @@ def replay(path: Path, request: dict[str, Any], policy: dict[str, Any],
                 f["allocated_opening_fees_u"] = int(Decimal(close["opening_fees_u"]))
                 f["estimated_closing_total_fees_u"] = int(Decimal(close["closing_fees_u"]))
         decision_request: dict[str, Any] = {"as_of": now, "facts": f}
+        if "trading_calendar" in frame:
+            decision_request["trading_calendar"] = frame["trading_calendar"]
         replacement = None
         replacement_key = None
         if opening and a["allow_roll"] and frame.get("replacement"):
