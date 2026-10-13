@@ -76,6 +76,10 @@ burst-retry or infer a quota from unrelated limits.
 
 ## Official references
 
+The ordinary client remains GET-only. The separate [order adapter and local
+planner](etrade-orders.md) reuse named profiles but do not expose live CLI writes;
+API access does not grant the account's required Level 1 options approval.
+
 - [Getting Started: keys and market data agreement](https://developer.etrade.com/getting-started/)
 - [Developer Guides: OAuth lifecycle and sandbox behavior](https://developer.etrade.com/getting-started/developer-guides)
 - [Authorization: access token](https://apisb.etrade.com/docs/api/authorization/get_access_token.html)

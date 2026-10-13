@@ -10,6 +10,27 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-13 — Default-disabled E*TRADE order adapter
+
+- Added account-pinned LIMIT/DAY CALL preview, placement, change and cancellation
+  transport. Reused broker-independent intent/price validation and single-attempt
+  HTTP behavior; existing Schwab order shapes and execution gates remain compatible.
+- Named `broker order-plan` creates private local plans without OAuth/network;
+  `orders` and `order-status` retain explicit GET observations. No CLI live-write
+  switch, automatic fill import, production enablement or scheduled action.
+- Preview receipts bind exact account/terms, expire in three minutes and are
+  consumed before dispatch. Partial/uncertain replacements stop; accepted orders
+  and requested cancellations still require reconciliation. Cross-process durable
+  execution attempts and fresh E*TRADE production preflight remain future work.
+- Documented the official Level 1 application entry and its covered-position
+  scope. API/OAuth access does not establish options approval. Production GET
+  order-list requests reached the API but returned HTTP 204 without details;
+  complete order coverage and all broker write operations remain live-unverified.
+- No schema migration, dependency, options application submission or real order.
+- Validation: 642 Python tests, Ruff, strict mypy, governance and diff checks
+  passed. Broker-write tests use synthetic transports only.
+- Publication: ready for review on `codex/etrade-orders`; not merged.
+
 ### 2026-10-12 — Shared named broker/account access
 
 - Added one read-only `broker --profile` interface for Schwab and E*TRADE,

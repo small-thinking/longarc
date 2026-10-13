@@ -4,6 +4,10 @@ Use one `broker` command for Schwab and E*TRADE. A profile selects the broker,
 local login alias, credential directory, environment, and one explicitly bound
 securities account. Separate accounts never combine share coverage or cash.
 The same analytics, execution ledger and reports operate on canonical inputs.
+Separate [E*TRADE order commands](etrade-orders.md) provide offline limit CALL
+plans and explicitly requested GET order observations using the same profiles.
+They do not enable production order writes. Schwab keeps its existing separate
+order commands and gates.
 
 ## Local configuration
 

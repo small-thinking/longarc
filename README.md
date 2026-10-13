@@ -43,7 +43,11 @@ commands remain compatible. See [shared commands](docs/brokers.md) and maintaine
 [E*TRADE contracts](docs/etrade-readonly.md). E*TRADE tokens expire at default
 Eastern midnight; renewal handles same-day inactivity, not next-day consent.
 Passing synthetic tests does not establish verified live brokerage integration.
-No E*TRADE order writes or new unattended execution are added.
+Separate [E*TRADE order capability](docs/etrade-orders.md) now provides local
+limit CALL plans and explicit read-only order/status observations. Its tested
+transport supports preview/place/change/cancel, defaults disabled and has no
+live-write CLI switch. Account options approval and fresh production execution
+checks remain separate; no unattended execution is added.
 
 ## Local Schwab API access
 
