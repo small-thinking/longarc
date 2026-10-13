@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from longarc.brokers.market import normalize_expiries, normalize_quotes
+from longarc.brokers.order_cli import add_parsers as add_order_parsers
 from longarc.brokers.profiles import BrokerProfile, load_profiles, private_path, save_profiles
 from longarc.brokers.snapshots import (
     account_inventory,
@@ -303,6 +304,7 @@ def add_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) 
     parser.add_argument("--profiles-file", default="private/brokers.json")
     parser.add_argument("--profile", help="Explicit configured account/profile alias")
     actions = parser.add_subparsers(dest="broker_action", required=True)
+    add_order_parsers(actions)
     actions.add_parser("profiles", help="List aliases without credentials or account numbers")
     add = actions.add_parser("add-profile", help="Save a new named local profile")
     add.add_argument("--broker", required=True, choices=("schwab", "etrade"))

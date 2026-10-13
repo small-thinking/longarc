@@ -117,10 +117,16 @@ def signed_request(
     token: str = "",
     token_secret: str = "",
     extras: dict[str, str] | None = None,
+    method: str = "GET",
+    body: bytes | None = None,
     clock: Callable[[], float] = time.time,
     nonce: Callable[[], str] = lambda: secrets.token_hex(16),
 ) -> Request:
-    """Sign one pinned-host GET request per OAuth 1.0a (HMAC-SHA1)."""
+    """Sign a pinned-host OAuth request. JSON body is not a form signature parameter."""
+    if method not in {"GET", "POST", "PUT"} or (method == "GET" and body is not None):
+        raise ETradeError("Unsupported E*TRADE request method/body.")
+    if body is not None and not isinstance(body, bytes):
+        raise ETradeError("E*TRADE JSON request body must be bytes.")
     parsed = urlsplit(url)
     if (
         parsed.scheme != "https"
@@ -147,16 +153,17 @@ def signed_request(
         for key, value in sorted(parameters, key=lambda item: (_encode(item[0]), _encode(item[1])))
     )
     base_url = f"{parsed.scheme}://{parsed.hostname}{parsed.path or '/'}"
-    base = "&".join(("GET", _encode(base_url), _encode(normalized)))
+    base = "&".join((method, _encode(base_url), _encode(normalized)))
     key = f"{_encode(config.consumer_secret)}&{_encode(token_secret)}".encode()
     signature = base64.b64encode(hmac.new(key, base.encode(), hashlib.sha1).digest()).decode()
     oauth["oauth_signature"] = signature
     header = "OAuth " + ",".join(
         f'{_encode(name)}="{_encode(value)}"' for name, value in sorted(oauth.items())
     )
-    return Request(
-        url, headers={"Authorization": header, "Accept": "application/json"}, method="GET"
-    )
+    headers = {"Authorization": header, "Accept": "application/json"}
+    if body is not None:
+        headers["Content-Type"] = "application/json"
+    return Request(url, data=body, headers=headers, method=method)
 
 
 def _form_response(payload: bytes) -> dict[str, str]:

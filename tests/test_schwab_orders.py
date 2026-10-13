@@ -257,7 +257,7 @@ def test_unknown_broker_status_requires_reconciliation_with_evidence() -> None:
 def test_default_transport_refuses_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
     from urllib.error import HTTPError
 
-    from longarc.schwab import orders
+    from longarc.brokers import order_http as orders
 
     def fake_opener(handler: object) -> object:
         assert isinstance(handler, orders._NoRedirects)

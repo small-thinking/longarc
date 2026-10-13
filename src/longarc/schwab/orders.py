@@ -5,19 +5,19 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
-from datetime import date
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Mapping
-from urllib.error import HTTPError
+from typing import Any, Mapping
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import Request
+
+from longarc.brokers.order_http import OrderResponse as OrderResponse
+from longarc.brokers.order_http import OrderTransport as OrderTransport
+from longarc.brokers.order_http import order_transport as order_transport
+from longarc.brokers.order_intents import normalize_call_intent
 
 HOST = "https://api.schwabapi.com"
 _ACCOUNT = re.compile(r"[A-Za-z0-9_-]{1,128}\Z")
 _ORDER_ID = re.compile(r"[0-9]{1,30}\Z")
-_OPTION = re.compile(r"([A-Z][A-Z0-9.]{0,5}) {0,5}(\d{2})(\d{2})(\d{2})C(\d{8})\Z")
-_PRICE = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]{1,2})?\Z")
 _KNOWN_STATUSES = {
     "AWAITING_PARENT_ORDER", "AWAITING_CONDITION", "AWAITING_STOP_CONDITION",
     "AWAITING_MANUAL_REVIEW", "ACCEPTED", "AWAITING_UR_OUT", "PENDING_ACTIVATION",
@@ -29,86 +29,15 @@ _TERMINAL_STATUSES = {"REJECTED", "CANCELED", "REPLACED", "FILLED", "EXPIRED"}
 _CLEARABLE_ZERO_FILL_STATUSES = {"REJECTED", "CANCELED", "EXPIRED"}
 
 
-@dataclass(frozen=True)
-class OrderResponse:
-    status: int
-    headers: Mapping[str, str]
-    body: bytes
-
-
-OrderTransport = Callable[[Request, float], OrderResponse]
-
-
-class _NoRedirects(HTTPRedirectHandler):
-    def redirect_request(
-        self, request: Request, fp: object, code: int, msg: str,
-        headers: object, newurl: str,
-    ) -> None:
-        return None
-
-
-def order_transport(request: Request, timeout: float) -> OrderResponse:
-    """One HTTP attempt; redirects and error bodies are never followed or surfaced."""
-    opener = build_opener(_NoRedirects())
-    try:
-        with opener.open(request, timeout=timeout) as response:
-            return OrderResponse(response.status, dict(response.headers), response.read())
-    except HTTPError as error:
-        return OrderResponse(error.code, dict(error.headers), b"")
-
-
-def _option_symbol(value: Any) -> str:
-    if not isinstance(value, str) or len(value) != 21:
-        raise ValueError("Standard CALL option symbol is required")
-    match = _OPTION.fullmatch(value)
-    if match is None or value[:6] != f"{match.group(1):<6}":
-        raise ValueError("Standard CALL option symbol is required")
-    _, year, month, day, strike = match.groups()
-    try:
-        date(2000 + int(year), int(month), int(day))
-    except ValueError as error:
-        raise ValueError("Invalid CALL expiry") from error
-    if int(strike) <= 0:
-        raise ValueError("Positive CALL strike is required")
-    return value
-
-
-def _quantity(value: Any) -> int:
-    if type(value) is not int or not 1 <= value < 2**31:
-        raise ValueError("Order quantity must be a positive integer")
-    return value
-
-
-def _price(value: Any, tick: str = "0.01") -> str:
-    if not isinstance(value, str) or len(value) > 15 or not _PRICE.fullmatch(value):
-        raise ValueError("Limit price must be a positive decimal string")
-    if tick not in {"0.01", "0.05"}:
-        raise ValueError("Tick must be 0.01 or 0.05")
-    try:
-        price = Decimal(value)
-    except InvalidOperation as error:
-        raise ValueError("Invalid limit price") from error
-    if not price.is_finite() or price <= 0 or price % Decimal(tick):
-        raise ValueError("Limit price must be positive and on the selected tick")
-    return format(price.quantize(Decimal("0.01")), ".2f")
-
-
 def build_limit_call_order(request: dict[str, Any]) -> dict[str, Any]:
     """Build only a normal-session, day-duration, single CALL limit order."""
-    if not isinstance(request, dict) or request.keys() - {
-        "option_symbol", "instruction", "quantity", "price", "tick"
-    }:
-        raise ValueError("Unsupported order request fields")
-    instruction = request.get("instruction")
-    if instruction not in {"SELL_TO_OPEN", "BUY_TO_CLOSE"}:
-        raise ValueError("Only SELL_TO_OPEN or BUY_TO_CLOSE is supported")
-    symbol = _option_symbol(request.get("option_symbol"))
-    quantity = _quantity(request.get("quantity"))
-    price = _price(request.get("price"), request.get("tick", "0.01"))
+    intent = normalize_call_intent(request)
     return {"session": "NORMAL", "duration": "DAY", "orderType": "LIMIT",
-            "price": price, "orderStrategyType": "SINGLE",
-            "orderLegCollection": [{"instruction": instruction, "quantity": quantity,
-                                    "instrument": {"assetType": "OPTION", "symbol": symbol}}]}
+            "price": intent["price"], "orderStrategyType": "SINGLE",
+            "orderLegCollection": [{"instruction": intent["instruction"],
+                                    "quantity": intent["quantity"],
+                                    "instrument": {"assetType": "OPTION",
+                                                   "symbol": intent["option_symbol"]}}]}
 
 
 def validate_order_spec(spec: dict[str, Any]) -> dict[str, Any]:
