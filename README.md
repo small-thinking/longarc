@@ -119,6 +119,11 @@ explicit DTE/Delta target. It reports sample counts, IV percentile/rank, missing
 units/timestamps, and optional forecast-variance and IV-only Vega scenarios.
 The covered-call review skill routes this context into entry and holding reviews
 as optional evidence after policy checks; current ask-based closes need no forecast.
+For a confirmed fill recorded to the minute, the review checks the full minute
+against a strict profit-pace boundary before using its start time in an advisory
+decision. An explicitly user-approved fee estimate may support a conditional
+close recommendation; reports retain the assumption and keep actual broker fees,
+fills and realized profit separate. This adds no order permission or new policy.
 Monetary scenarios are USD only. The review procedure supports explicitly adopted
 heuristic weights and distribution-shift research; automatic multi-factor scoring,
 shift detection and weight learning are not implemented or calibrated.

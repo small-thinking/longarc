@@ -10,6 +10,21 @@ SQLite was selected and the local observation storage slice is implemented. The 
 
 ## Change Log
 
+### 2026-10-29 — Conditional profit-exit evidence guidance
+
+- Clarified how read-only reviews use minute-precision confirmed opening fills:
+  check the whole minute against a strict elapsed-time threshold and retain the
+  source precision in reports.
+- Explicitly authorized fee totals may support an assumption-based advisory
+  close decision. The report keeps actual fees and realized profit unknown,
+  compares the standard fee schedule, and names any inputs that still block
+  `INSUFFICIENT_DATA` rather than attributing it to unrelated checks.
+- No policy, trading permission, database schema or migration change. Guidance
+  still requires fresh position, quote, order and fee checks before human action.
+- Validation: guidance and documentation diff review; no code behavior changed.
+- Publication: [PR #34](https://github.com/small-thinking/longarc/pull/34)
+  open for review; not merged. Next: review and merge guidance.
+
 ### 2026-10-13 — Default-disabled E*TRADE order adapter
 
 - Added account-pinned LIMIT/DAY CALL preview, placement, change and cancellation

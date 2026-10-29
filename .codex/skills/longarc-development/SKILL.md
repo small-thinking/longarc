@@ -27,6 +27,19 @@ cutoff). Report gross premium capture and elapsed lifetime separately; an
 unknown opening time makes the pace trigger unknown, not satisfied. The fixed
 profit threshold belongs only to policies that select it; risk exits remain
 independent and take priority.
+If a confirmed fill shows only the execution minute, retain that precision in
+the evidence. Use the displayed minute start as the conservative time input
+only after checking the full minute interval with UTC elapsed seconds; if the
+strict pace comparison could change within that minute, leave it unknown.
+When the user explicitly authorizes total fee assumptions for a named holding,
+pass those totals to `options decide` with their source and assumed status in
+the request, and keep actual broker fees unknown. Label `BTC_PROFIT` from such a
+request as an assumption-based advisory result, show the alternative standard
+fee calculation, and recheck position, orders, quote and fees before any human
+execution. Never let an assumed fee become a manual fill or a reconciled profit.
+If the decision remains `INSUFFICIENT_DATA`, report the specific missing profit
+inputs; unrelated unknown entry checks do not by themselves explain why the
+profit exit branch stopped.
 
 ## Named broker and account selection
 
