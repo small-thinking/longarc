@@ -22,7 +22,8 @@ SQLite was selected and the local observation storage slice is implemented. The 
 - No policy, trading permission, database schema or migration change. Guidance
   still requires fresh position, quote, order and fee checks before human action.
 - Validation: guidance and documentation diff review; no code behavior changed.
-- Publication: review branch prepared; PR pending. Next: review and merge guidance.
+- Publication: [PR #34](https://github.com/small-thinking/longarc/pull/34)
+  open for review; not merged. Next: review and merge guidance.
 
 ### 2026-10-13 — Default-disabled E*TRADE order adapter
 
